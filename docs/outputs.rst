@@ -84,7 +84,7 @@ Visual Reports
 --------------
 *PETPrep* outputs summary reports, written to ``<output dir>/petprep/sub-<subject_label>.html``.
 These reports provide a quick way to make visual inspection of the results easy.
-`View a sample report. <_static/SampleReport/sample_report.html>`_
+`View a sample report. <_static/sample_report/sample_report.html>`_
 
 Derivatives of *PETPrep* (preprocessed data)
 ---------------------------------------------
