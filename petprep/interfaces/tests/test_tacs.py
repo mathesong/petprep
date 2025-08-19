@@ -164,7 +164,7 @@ def test_tacs_workflow(tmp_path):
         inputs = pickle.load(f)
 
     assert inputs['in_file'] == str(resampled_pet)
-    assert Path(tmp_path / 'pet_tacs_wf' / 'tac' / 'pet_resampled_timeseries.tsv').exists()
+    assert Path(tmp_path / 'pet_tacs_wf' / 'tac' / 'pet_resampled_tacs.tsv').exists()
 
 
 def test_ExtractRefTAC(tmp_path):

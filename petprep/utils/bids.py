@@ -103,6 +103,7 @@ def write_bidsignore(deriv_dir):
         '*_pet.pet.gii',
         '*_mixing.tsv',
         '*_timeseries.tsv',
+        '*_tacs.tsv',
     )
     ignore_file = Path(deriv_dir) / '.bidsignore'
 

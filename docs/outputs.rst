@@ -309,7 +309,7 @@ from an anatomical segmentation. The resulting table has ``FrameTimesStart`` and
 
   sub-<subject_label>/
     pet/
-      sub-<subject_label>_[specifiers]_seg-<seg>_desc-preproc_timeseries.tsv
+      sub-<subject_label>_[specifiers]_seg-<seg>_desc-preproc_tacs.tsv
 
 The ``desc-preproc`` entity indicates that the curves were derived from the
 preprocessed PET series.
@@ -323,7 +323,7 @@ table containing the mean uptake within that region::
 
   sub-<subject_label>/
     pet/
-      sub-<subject_label>_[specifiers]_seg-<seg>_ref-<ref>_desc-preproc_timeseries.tsv
+      sub-<subject_label>_[specifiers]_seg-<seg>_ref-<ref>_desc-preproc_tacs.tsv
 
 The ``ref`` entity captures the reference region identifier provided via the
 :ref:`CLI options <cli_refmask>` ``--ref-mask-name`` and ``--ref-mask-index``.

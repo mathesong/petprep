@@ -80,7 +80,7 @@ class ExtractTACs(SimpleInterface):
 
         out_file = fname_presuffix(
             self.inputs.in_file,
-            suffix='_timeseries.tsv',
+            suffix='_tacs.tsv',
             newpath=runtime.cwd,
             use_ext=False,
         )
@@ -138,7 +138,7 @@ class ExtractRefTAC(SimpleInterface):
 
         out_file = fname_presuffix(
             self.inputs.in_file,
-            suffix='_timeseries.tsv',
+            suffix='_tacs.tsv',
             newpath=runtime.cwd,
             use_ext=False,
         )

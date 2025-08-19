@@ -30,7 +30,7 @@ def init_pet_tacs_wf(*, name: str = 'pet_tacs_wf') -> pe.Workflow:
         niu.IdentityInterface(fields=['pet_anat', 'segmentation', 'dseg_tsv', 'metadata']),
         name='inputnode',
     )
-    outputnode = pe.Node(niu.IdentityInterface(fields=['timeseries']), name='outputnode')
+    outputnode = pe.Node(niu.IdentityInterface(fields=['tacs']), name='outputnode')
 
     # Resample PET to segmentation space
     resample_pet = pe.Node(
@@ -68,7 +68,7 @@ def init_pet_tacs_wf(*, name: str = 'pet_tacs_wf') -> pe.Workflow:
                     ('metadata', 'metadata'),
                 ],
             ),
-            (tac, outputnode, [('out_file', 'timeseries')]),
+            (tac, outputnode, [('out_file', 'tacs')]),
         ]
     )
 
