@@ -580,11 +580,6 @@ Confounds estimation
     wf = init_pet_confs_wf(
         name="discover_wf",
         mem_gb=1,
-        metadata={
-            "FrameTimesStart": [0, 2, 4, 6],
-            "FrameDuration": [2, 2, 2, 2],
-        },
-        regressors_all_comps=False,
         regressors_dvars_th=1.5,
         regressors_fd_th=0.5,
     )
