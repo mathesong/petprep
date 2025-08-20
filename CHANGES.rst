@@ -8,3 +8,7 @@ Bug-fix release in the 0.0.x series.
 ==================
 * Initial release of PETPrep.
 * Provides preprocessing workflows for PET imaging data.
+
+0.0.1a0 (2025-08-19)
+====================
+* Preliminary release
