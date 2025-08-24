@@ -461,7 +461,7 @@ def init_pet_fit_wf(
         ds_ref_tacs = pe.Node(
             DerivativesDataSink(
                 base_directory=config.execution.petprep_dir,
-                suffix='timeseries',
+                suffix='tacs',
                 seg=config.workflow.seg,
                 desc='preproc',
                 ref=config.workflow.ref_mask_name,

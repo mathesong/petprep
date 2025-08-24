@@ -699,7 +699,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
     ds_pet_tacs = pe.Node(
         DerivativesDataSink(
             base_directory=petprep_dir,
-            suffix='timeseries',
+            suffix='tacs',
             seg=config.workflow.seg,
             desc='preproc',
             allowed_entities=('seg',),
@@ -733,7 +733,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
         ds_ref_tacs = pe.Node(
             DerivativesDataSink(
                 base_directory=petprep_dir,
-                suffix='timeseries',
+                suffix='tacs',
                 seg=config.workflow.seg,
                 desc='preproc',
                 ref=config.workflow.ref_mask_name,
