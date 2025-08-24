@@ -20,7 +20,7 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
-"""fMRI preprocessing workflow."""
+"""PET preprocessing workflow."""
 
 from .. import config
 
@@ -59,13 +59,9 @@ def main():
         setup_exceptionhook()
         config.nipype.plugin = 'Linear'
 
-    sentry_sdk = None
     if not config.execution.notrack and not config.execution.debug:
-        import sentry_sdk
+        from ..utils.telemetry import setup_migas
 
-        from ..utils.telemetry import sentry_setup, setup_migas
-
-        sentry_setup()
         setup_migas(init_ping=True)
 
     # CRITICAL Save the config to a file. This is necessary because the execution graph
@@ -124,14 +120,6 @@ def main():
     # Clean up master process before running workflow, which may create forks
     gc.collect()
 
-    # Sentry tracking
-    if sentry_sdk is not None:
-        with sentry_sdk.configure_scope() as scope:
-            scope.set_tag('run_uuid', config.execution.run_uuid)
-            scope.set_tag('npart', len(config.execution.participant_label))
-        sentry_sdk.add_breadcrumb(message='PETPrep started', level='info')
-        sentry_sdk.capture_message('PETPrep started', level='info')
-
     config.loggers.workflow.log(
         15,
         '\n'.join(['PETPrep config:'] + [f'\t\t{s}' for s in config.dumps().splitlines()]),
@@ -152,16 +140,10 @@ def main():
                 for crashfile in crashfolder.glob('crash*.*'):
                     process_crashfile(crashfile)
 
-            if sentry_sdk is not None and 'Workflow did not execute cleanly' not in str(e):
-                sentry_sdk.capture_exception(e)
         config.loggers.workflow.critical('PETPrep failed: %s', e)
         raise
     else:
         config.loggers.workflow.log(25, 'PETPrep finished successfully!')
-        if sentry_sdk is not None:
-            success_message = 'PETPrep finished without errors'
-            sentry_sdk.add_breadcrumb(message=success_message, level='info')
-            sentry_sdk.capture_message(success_message, level='info')
 
         # Bother users with the boilerplate only iff the workflow went okay.
         boiler_file = config.execution.petprep_dir / 'logs' / 'CITATION.md'
@@ -231,7 +213,5 @@ def main():
                 f': {", ".join(failed_reports)}.'
             )
             config.loggers.cli.error(msg)
-            if sentry_sdk is not None:
-                sentry_sdk.capture_message(msg, level='error')
 
         sys.exit(int((errno + len(failed_reports)) > 0))

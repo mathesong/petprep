@@ -46,6 +46,8 @@ In short, install the ``petprep-docker`` wrapper with pip::
 
   $ python -m pip install petprep-docker
 
+Warning - since petprep relies on many tools (see below Dependencies), you need about 30 Gb free space (the image is 24GB -- also beware of docker settings which by default will not use the last 10% of your disk space).
+
 Then run the ``petprep-docker`` command-line as if you were running
 ``petprep`` on a *bare-metal* installation::
 

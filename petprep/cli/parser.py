@@ -361,20 +361,6 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         help='Deprecated - use `--force no-bbr` instead.',
     )
     g_conf.add_argument(
-        '--hmc-fwhm',
-        action='store',
-        default=10,
-        type=float,
-        help='FWHM for Gaussian smoothing applied during head-motion estimation.',
-    )
-    g_conf.add_argument(
-        '--hmc-start-time',
-        action='store',
-        default=120,
-        type=float,
-        help='Time (in seconds) after which head-motion estimation is performed.',
-    )
-    g_conf.add_argument(
         '--random-seed',
         dest='_random_seed',
         action='store',
@@ -510,19 +496,20 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         ' at https://surfer.nmr.mgh.harvard.edu/registration.html',
     )
     g_fs.add_argument(
+        '--no-submm-recon',
+        action='store_false',
+        dest='hires',
+        help='Disable sub-millimeter (hires) reconstruction',
+    )
+    fs_mutex = g_fs.add_mutually_exclusive_group()
+    fs_mutex.add_argument(
         '--fs-subjects-dir',
         metavar='PATH',
         type=Path,
         help='Path to existing FreeSurfer subjects directory to reuse. '
         '(default: OUTPUT_DIR/freesurfer)',
     )
-    g_fs.add_argument(
-        '--no-submm-recon',
-        action='store_false',
-        dest='hires',
-        help='Disable sub-millimeter (hires) reconstruction',
-    )
-    g_fs.add_argument(
+    fs_mutex.add_argument(
         '--fs-no-reconall',
         action='store_false',
         dest='run_reconall',
@@ -534,6 +521,22 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         dest='fs_no_resume',
         help='EXPERT: Import pre-computed FreeSurfer reconstruction without resuming. '
         'The user is responsible for ensuring that all necessary files are present.',
+    )
+
+    g_hmc = parser.add_argument_group('Options for head motion correction')
+    g_hmc.add_argument(
+        '--hmc-fwhm',
+        action='store',
+        default=10,
+        type=float,
+        help='FWHM for Gaussian smoothing applied during head-motion estimation.',
+    )
+    g_hmc.add_argument(
+        '--hmc-start-time',
+        action='store',
+        default=120,
+        type=float,
+        help='Time (in seconds) after which head-motion estimation is performed.',
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
@@ -672,8 +675,8 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         action='store_true',
         default=False,
         help='Opt-out of sending tracking information of this run to '
-        'the PETPREP developers. This information helps to '
-        'improve FMRIPREP and provides an indicator of real '
+        'the PETPrep developers. This information helps to '
+        'improve PETPrep and provides an indicator of real '
         'world usage crucial for obtaining funding.',
     )
     g_other.add_argument(
@@ -748,9 +751,9 @@ def parse_args(args=None, namespace=None):
     if not config.execution.notrack:
         import importlib.util
 
-        if importlib.util.find_spec('sentry_sdk') is None:
+        if importlib.util.find_spec('migas') is None:
             config.execution.notrack = True
-            config.loggers.cli.warning('Telemetry disabled because sentry_sdk is not installed.')
+            config.loggers.cli.warning('Telemetry disabled because migas is not installed.')
         else:
             config.loggers.cli.info(
                 'Telemetry system to collect crashes and errors is enabled '

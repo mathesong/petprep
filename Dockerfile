@@ -203,7 +203,7 @@ ENV PATH="/opt/afni-latest:$PATH" \
 RUN useradd -m -s /bin/bash -G users petprep
 WORKDIR /home/petprep
 ENV HOME="/home/petprep" \
-    LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+    LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 
 COPY --from=micromamba /bin/micromamba /bin/micromamba
 COPY --from=micromamba /opt/conda/envs/petprep /opt/conda/envs/petprep
@@ -212,7 +212,7 @@ ENV MAMBA_ROOT_PREFIX="/opt/conda"
 RUN micromamba shell init -s bash && \
     echo "micromamba activate petprep" >> $HOME/.bashrc
 ENV PATH="/opt/conda/envs/petprep/bin:$PATH" \
-    CPATH="/opt/conda/envs/petprep/include:$CPATH" \
+    CPATH="/opt/conda/envs/petprep/include:${CPATH:-}" \
     LD_LIBRARY_PATH="/opt/conda/envs/petprep/lib:$LD_LIBRARY_PATH"
 
 # Precaching atlases

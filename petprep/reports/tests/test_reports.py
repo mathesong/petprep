@@ -18,18 +18,14 @@ data_dir = data.load('tests')
         (
             3,
             [
-                'sub-001_anat.html',
-                'sub-001_ses-001_func.html',
-                'sub-001_ses-003_func.html',
-                'sub-001_ses-004_func.html',
-                'sub-001_ses-005_func.html',
-                'sub-001_ses-001_pet.html',
-                'sub-001_ses-003_pet.html',
-                'sub-001_ses-004_pet.html',
-                'sub-001_ses-005_pet.html',
+                'sub-01_anat.html',
+                'sub-01_ses-001_pet.html',
+                'sub-01_ses-003_pet.html',
+                'sub-01_ses-004_pet.html',
+                'sub-01_ses-005_pet.html',
             ],
         ),
-        (4, ['sub-001.html']),
+        (4, ['sub-01.html']),
     ],
 )
 # Test with and without crash file
@@ -41,7 +37,7 @@ data_dir = data.load('tests')
     'session_list', [['001', '003', '004', '005'], ['ses-001', 'ses-003', 'ses-004', 'ses-005']]
 )
 # Test sub- prefix stripping
-@pytest.mark.parametrize('subject_label', ['001', 'sub-001'])
+@pytest.mark.parametrize('subject_label', ['01', 'sub-01'])
 @pytest.mark.skipif(
     not Path.exists(data_dir / 'work'),
     reason='Package installed - large test data directory excluded from wheel',
@@ -58,8 +54,8 @@ def test_ReportSeparation(
 ):
     fake_uuid = 'fake_uuid'
 
-    sub_dir = tmp_path / 'sub-001'
-    shutil.copytree(data_dir / 'work/reportlets/fmriprep/sub-001', sub_dir)
+    sub_dir = tmp_path / 'sub-01'
+    shutil.copytree(data_dir / 'work/reportlets/petprep/sub-01', sub_dir)
 
     # Test report generation with and without crash file
     if error:
@@ -82,7 +78,7 @@ def test_ReportSeparation(
     config.execution.layout = BIDSLayout(data_dir / 'ds000005')
     monkeypatch.setattr(config.execution.layout, 'get_sessions', mock_session_list)
     monkeypatch.setattr(
-        config.execution, 'bids_filters', {'bold': {'session': ['001', '003', '004', '005']}}
+        config.execution, 'bids_filters', {'pet': {'session': ['001', '003', '004', '005']}}
     )
 
     # Generate report
@@ -118,7 +114,7 @@ def test_ReportSeparation(
 def test_pet_report(tmp_path, monkeypatch):
     fake_uuid = 'fake_uuid'
 
-    pet_source = data_dir / 'work' / 'reportlets' / 'petprep' / 'sub-01'
+    pet_source = data_dir / 'work' / 'reportlets' / 'petprep' / 'sub-01' / 'pet'
     sub_dir = tmp_path / 'sub-01' / 'figures'
     sub_dir.mkdir(parents=True)
 

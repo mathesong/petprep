@@ -4,6 +4,10 @@
 (`www.nipreps.org <https://www.nipreps.org>`__) for the preprocessing of
 positron emission tomography (PET) imaging.
 
+.. image:: https://img.shields.io/pypi/v/petprep.svg
+  :target: https://pypi.python.org/pypi/petprep/
+  :alt: Latest Version
+
 .. image:: https://github.com/nipreps/petprep/actions/workflows/tests.yml/badge.svg
   :target: https://github.com/nipreps/petprep/actions/workflows/tests.yml
   :alt: Stable tests
@@ -139,3 +143,13 @@ This was supported by the BRAIN Initiative
 grant (OpenNeuroPET, grant ID 1R24MH120004-01A1); the Novo Nordisk Foundation (OpenNeuroPET, grant ID NN20OC0063277); the Laura and John Arnold Foundation,
 the NIH (grant NBIB R01EB020740, PI: Ghosh);
 and NIMH (R24MH114705, R24MH117179, R01MH121867, PI: Poldrack)
+
+.. _FSL: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki
+.. _ANTs: http://stnava.github.io/ANTs/
+.. _FreeSurfer: https://surfer.nmr.mgh.harvard.edu/
+.. _AFNI: https://afni.nimh.nih.gov/
+.. _PETSurfer: https://surfer.nmr.mgh.harvard.edu/fswiki/PetSurfer
+.. _PETPVC: https://github.com/UCL/PETPVC
+.. _kinfitr: https://github.com/mathesong/kinfitr
+.. _PMOD: https://www.pmod.com/
+.. _BIDS: https://bids.neuroimaging.io/

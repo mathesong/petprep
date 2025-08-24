@@ -176,6 +176,39 @@ This feature has several intended use-cases:
 See also the ``--level`` flag, which can be used to control which derivatives are
 generated.
 
+Head motion correction
+----------------------
+*PETPrep* can correct for head motion in the PET data.
+The head motion is estimated using a frame-based robust registration approach to an unbiased mean 
+volume implemented in FreeSurfer's mri_robust_register (Reuter et al., 2010), combined with 
+preprocessing steps using tools from FSL (Jenkinson et al., 2012). Specifically, for the estimation 
+of head motion, each frame is initially smoothed with a Gaussian filter (full-width half-maximum [FWHM] of 10 mm, --hmc-fwhm 10), 
+followed by thresholding at 20% of the intensity range to reduce noise and improve registration 
+accuracy (removing stripe artefacts from filtered back projection reconstructions). 
+Per default, the motion is estimated selectively of frames acquired after 120 seconds post-injection of the tracer (--hmc-start-time 120),
+as frames before this often contain low count statistics. Frames preceding 120 seconds were corrected 
+using identical transformations as derived for the first frame after 120 seconds. The robust 
+registration (mri_robust_register) algorithm utilized settings optimized for PET data: intensity 
+scaling was enabled, automated sensitivity detection was activated, and the Frobenius norm threshold 
+for convergence was set at 0.0001, ensuring precise and consistent alignment across frames.
+
+To edit the motion correction parameters and run the workflow, use: ::
+
+    $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
+
+Segmentation
+----------------
+*PETPrep* can segment the brain into different brain regions and extract time activity curves from these regions.
+The ``--seg`` flag selects the segmentation method to use.
+Available options are ``gtm`` (default) whole-brain segmentation from freesurfer, ``brainstem``, ``wm`` (white matter), ``thalamicNuclei``, ``hippocampusAmygdala``, ``raphe``, and ``limbic``.
+
+The ``gtm`` segmentation is a whole-brain segmentation that includes the
+cerebral cortex, subcortical structures, and cerebellum.
+
+To run the segmentation with the default ``gtm`` method, use: ::
+
+    $ petprep /data/bids_root /out participant --seg gtm 
+
 Partial volume correction
 -------------------------
 *PETPrep* can optionally correct PET images for partial volume effects.
@@ -223,6 +256,8 @@ Use ``--ref-mask-name`` to select a predefined region and
 The available masks are and do not require ``--ref-mask-index`` to be specified:
 - ``cerebellum``: Cerebellar gray matter (requires the ``--seg gtm`` option).
 - ``semiovale``: White matter in the centrum semiovale (requires the ``--seg wm`` option).
+- ``neocortex``: Neocortical gray matter (requires the ``--seg gtm`` option).
+- ``thalamus``: Thalamic gray matter (requires the ``--seg gtm`` option).
 
 The presets are defined in ``petprep/data/reference_mask/config.json``.
 
@@ -251,7 +286,7 @@ All bugs, concerns and enhancement requests for this software can be submitted h
 https://github.com/nipreps/petprep/issues.
 
 If you have a problem or would like to ask a question about how to use *PETPrep*,
-please submit a question to `NeuroStars.org <https://neurostars.org/tag/petprep>`_ with an ``petprep`` tag.
+please submit a question to `NeuroStars.org <https://neurostars.org/tag/petprep>`_ with a ``petprep`` tag.
 NeuroStars.org is a platform similar to StackOverflow but dedicated to neuroinformatics.
 
 Previous questions about *PETPrep* are available here:

@@ -900,7 +900,7 @@ def init_pet_preproc_report_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.pet.resampling import init_pet_preproc_report_wf
+            from petprep.workflows.pet.resampling import init_pet_preproc_report_wf
             wf = init_pet_preproc_report_wf(mem_gb=1, reportlets_dir='.')
 
     Parameters
@@ -997,6 +997,7 @@ def init_refmask_report_wf(
             ref=ref_name,
             datatype='figures',
             allowed_entities=('ref',),
+            suffix='pet',
         ),
         name='ds_report_refmask',
         run_without_submitting=True,

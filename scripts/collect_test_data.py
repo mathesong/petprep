@@ -128,7 +128,7 @@ def create_readme_content(pet_datasets, readme_template):
     return readme_template.format(dataset_list=dataset_list)
 
 
-pet_datasets = {
+DEFAULT_PET_DATASETS = {
     'ds005619': {
         'version': '1.1.0',
         'description': '[18F]SF51, a Novel 18F-labeled PET Radioligand for '
@@ -150,21 +150,25 @@ pet_datasets = {
     },
 }
 
-openneuro_template_string = 'https://github.com/OpenNeuroDatasets/{DATASET_ID}.git'
+OPENNEURO_TEMPLATE_STRING = 'https://github.com/OpenNeuroDatasets/{DATASET_ID}.git'
 
 
 def download_test_data(
-    working_directory: TemporaryDirectory | None = None,
-    output_directory: Path | str = '',
-    pet_datasets_json=None,  # Default to None, not the dict
+    working_directory: Path | None = None,
+    output_directory: Path | None = None,
+    pet_datasets_json: dict = None,  # Default to None, not the dict
+    derivatives: list[str] | None = None,
 ):
     # Use default datasets if no JSON file provided
     if pet_datasets_json is None:
-        datasets_to_use = pet_datasets  # Use the default defined at module level
+        datasets_to_use = DEFAULT_PET_DATASETS  # Use the default defined at module level
     else:
         # Load from JSON file
         with open(pet_datasets_json) as infile:
             datasets_to_use = json.load(infile)
+
+    if derivatives is None:
+        derivatives = []
 
     if not working_directory:
         working_directory = TemporaryDirectory()
@@ -184,18 +188,25 @@ def download_test_data(
                 dataset_path.rmdir()
             dataset = api.install(
                 path=dataset_path,
-                source=openneuro_template_string.format(DATASET_ID=dataset_id),
+                source=OPENNEURO_TEMPLATE_STRING.format(DATASET_ID=dataset_id),
             )
             # api.unlock(str(dataset_path))
             dataset.unlock()
 
             # see how pybids handles this datalad nonsense
             b = bids.layout.BIDSLayout(
-                dataset_path, derivatives=False
+                dataset_path,
+                derivatives=False,
+                validate=False,
             )  # when petderivatives are a thing, we'll think about using pybids to get them
 
             # Access participants.tsv
-            participants_files = b.get(suffix='participants', extension='.tsv', return_type='file')
+            participants_files = b.get(
+                suffix='participants',
+                extension='.tsv',
+                return_type='file',
+                scope='raw',
+            )
             if participants_files:
                 participants_file = participants_files[0]
 
@@ -207,33 +218,47 @@ def download_test_data(
                     [combined_participants_tsv, participants_df], ignore_index=True
                 )
             # if a subset of subjects are specified collect only those subjects in the install
-            if meta.get('subject_ids', []) != []:
-                for _id in meta['subject_ids']:
-                    combined_subjects.append(_id)
+            if meta.get('subject_ids', []):
+                for sid in meta['subject_ids']:
+                    combined_subjects.append(sid)
                     # Get the entire subject directory content including git-annex files
-                    subject_dir = dataset_path / f'sub-{_id}'
-                    if subject_dir.exists():
-                        # First, get all content in the subject directory
-                        # (this retrieves git-annex files)
-                        dataset.get(str(subject_dir))
+                    subject_dir = dataset_path / f'sub-{sid}'
+                    if not subject_dir.exists():
+                        continue
+                    # First, get all content in the subject directory
+                    # (this retrieves git-annex files)
+                    dataset.get(str(subject_dir))
 
-                        # Then collect all files after they've been retrieved
-                        all_files = []
-                        for file_path in subject_dir.rglob('*'):
-                            if file_path.is_file():
-                                relative_path = file_path.relative_to(dataset_path)
+                    # Then collect all files after they've been retrieved
+                    all_files = []
+                    for file_path in subject_dir.rglob('*'):
+                        if file_path.is_file():
+                            relative_path = file_path.relative_to(dataset_path)
+                            all_files.append(str(relative_path))
+
+                    for deriv in derivatives:
+                        print(f'Getting derivative: {deriv}/sub-{sid}')
+                        deriv_dir = dataset_path / 'derivatives' / deriv / f'sub-{sid}'
+                        try:
+                            dataset.get(str(deriv_dir))
+                        except Exception as e:  # noqa: BLE001
+                            print(f'Error getting derivative {deriv}/sub-{sid}: {e}')
+                            continue
+                        for dv in deriv_dir.rglob('*'):
+                            if dv.is_file():
+                                relative_path = dv.relative_to(dataset_path)
                                 all_files.append(str(relative_path))
 
-                        # Copy all files to output directory
-                        for f in all_files:
-                            print(f)
-                            # Unlock the file to make it writable
-                            api.unlock(path=str(dataset_path / f), dataset=str(dataset_path))
-                            source_file = dataset_path / f
-                            relative_path = source_file.relative_to(dataset_path)
-                            target_file = Path(output_directory) / relative_path
-                            target_file.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(source_file, target_file)
+                    # Copy all files to output directory
+                    for f in all_files:
+                        print(f)
+                        # Unlock the file to make it writable
+                        api.unlock(path=str(dataset_path / f), dataset=str(dataset_path))
+                        source_file = dataset_path / f
+                        relative_path = source_file.relative_to(dataset_path)
+                        target_file = Path(output_directory) / relative_path
+                        target_file.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(source_file, target_file)
 
             else:
                 combined_subjects += b.get(return_type='id', target='subject')
@@ -257,7 +282,7 @@ def download_test_data(
             json.dump(create_dataset_description(), f, indent=4)
 
         with open(readme_path, 'w') as f:
-            f.write(create_readme_content(pet_datasets, readme_template))
+            f.write(create_readme_content(datasets_to_use, readme_template))
         combined_participants.to_csv(
             Path(output_directory) / 'participants.tsv', sep='\t', index=False
         )
@@ -273,7 +298,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--working-directory',
         '-w',
-        type=str,
         default=TemporaryDirectory(),
         help='Working directory for downloading and combining datasets,'
         'defaults to a temporary directory.',
@@ -281,11 +305,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output-directory',
         '-o',
-        type=str,
-        default=os.getcwd(),
+        default=Path.cwd(),
         help='Output directory of combined dataset,'
-        'defaults where this script is called from, presently {os.getcwd()}',
-        required=True,
+        'defaults where this script is called from, presently current working directory.',
+    )
+    parser.add_argument(
+        '--derivatives',
+        '-d',
+        nargs='+',
+        type=str,
+        help='Additional derivatives to include alongside the BIDS data.',
     )
     parser.add_argument(
         '--datasets-json',
@@ -320,4 +349,5 @@ The default is structured like the following:
         working_directory=args.working_directory,
         output_directory=args.output_directory,
         pet_datasets_json=args.datasets_json,  # This will be None if not provided
+        derivatives=args.derivatives,
     )

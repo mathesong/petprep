@@ -71,9 +71,9 @@ def init_pet_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.tests import mock_config
-            from fmriprep import config
-            from fmriprep.workflows.pet.base import init_pet_wf
+            from petprep.workflows.tests import mock_config
+            from petprep import config
+            from petprep.workflows.pet.base import init_pet_wf
             with mock_config():
                 pet_file = config.execution.bids_dir / "sub-01" / "pet" \
                     / "sub-01_task-mixedgamblestask_run-01_pet.nii.gz"
@@ -142,16 +142,16 @@ def init_pet_wf(
     See Also
     --------
 
-    * :func:`~fmriprep.workflows.pet.fit.init_pet_fit_wf`
-    * :func:`~fmriprep.workflows.pet.fit.init_pet_native_wf`
-    * :func:`~fmriprep.workflows.pet.apply.init_pet_volumetric_resample_wf`
-    * :func:`~fmriprep.workflows.pet.outputs.init_ds_pet_native_wf`
-    * :func:`~fmriprep.workflows.pet.outputs.init_ds_volumes_wf`
-    * :func:`~fmriprep.workflows.pet.resampling.init_pet_surf_wf`
-    * :func:`~fmriprep.workflows.pet.resampling.init_pet_fsLR_resampling_wf`
-    * :func:`~fmriprep.workflows.pet.resampling.init_pet_grayords_wf`
-    * :func:`~fmriprep.workflows.pet.confounds.init_pet_confs_wf`
-    * :func:`~fmriprep.workflows.pet.confounds.init_carpetplot_wf`
+    * :func:`~petprep.workflows.pet.fit.init_pet_fit_wf`
+    * :func:`~petprep.workflows.pet.fit.init_pet_native_wf`
+    * :func:`~petprep.workflows.pet.apply.init_pet_volumetric_resample_wf`
+    * :func:`~petprep.workflows.pet.outputs.init_ds_pet_native_wf`
+    * :func:`~petprep.workflows.pet.outputs.init_ds_volumes_wf`
+    * :func:`~petprep.workflows.pet.resampling.init_pet_surf_wf`
+    * :func:`~petprep.workflows.pet.resampling.init_pet_fsLR_resampling_wf`
+    * :func:`~petprep.workflows.pet.resampling.init_pet_grayords_wf`
+    * :func:`~petprep.workflows.pet.confounds.init_pet_confs_wf`
+    * :func:`~petprep.workflows.pet.confounds.init_carpetplot_wf`
 
     """
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
@@ -166,11 +166,6 @@ def init_pet_wf(
     all_metadata = [config.execution.layout.get_metadata(file) for file in pet_series]
 
     nvols, mem_gb = estimate_pet_mem_usage(pet_file)
-    if nvols <= 1 - config.execution.sloppy:
-        config.loggers.workflow.warning(
-            f'Too short PET series (<= 5 timepoints). Skipping processing of <{pet_file}>.'
-        )
-        return
 
     config.loggers.workflow.debug(
         'Creating pet processing workflow for <%s> (%.2f GB / %d frames). '
@@ -755,80 +750,81 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
             (pet_ref_tacs_wf, ds_ref_tacs, [('outputnode.tacs', 'in_file')]),
         ])  # fmt:skip
 
-    pet_confounds_wf = init_pet_confs_wf(
-        mem_gb=mem_gb['largemem'],
-        metadata=all_metadata[0],
-        freesurfer=config.workflow.run_reconall,
-        regressors_all_comps=config.workflow.regressors_all_comps,
-        regressors_fd_th=config.workflow.regressors_fd_th,
-        regressors_dvars_th=config.workflow.regressors_dvars_th,
-        name='pet_confounds_wf',
-    )
-
-    ds_confounds = pe.Node(
-        DerivativesDataSink(
-            base_directory=petprep_dir,
-            desc='confounds',
-            suffix='timeseries',
-        ),
-        name='ds_confounds',
-        run_without_submitting=True,
-        mem_gb=config.DEFAULT_MEMORY_MIN_GB,
-    )
-    ds_confounds.inputs.source_file = pet_file
-
-    workflow.connect([
-        (inputnode, pet_confounds_wf, [
-            ('t1w_tpms', 'inputnode.t1w_tpms'),
-            ('t1w_mask', 'inputnode.t1w_mask'),
-        ]),
-        (pet_fit_wf, pet_confounds_wf, [
-            ('outputnode.pet_mask', 'inputnode.pet_mask'),
-            ('outputnode.petref', 'inputnode.petref'),
-            ('outputnode.motion_xfm', 'inputnode.motion_xfm'),
-            ('outputnode.petref2anat_xfm', 'inputnode.petref2anat_xfm'),
-        ]),
-        (pet_native_wf, pet_confounds_wf, [
-            ('outputnode.pet_native', 'inputnode.pet'),
-        ]),
-        (pet_confounds_wf, ds_confounds, [
-            ('outputnode.confounds_file', 'in_file'),
-            ('outputnode.confounds_metadata', 'meta_dict'),
-        ]),
-    ])  # fmt:skip
-
-    if spaces.get_spaces(nonstandard=False, dim=(3,)):
-        carpetplot_wf = init_carpetplot_wf(
-            mem_gb=mem_gb['resampled'],
+    if nvols > 1:  # run these only if 4-D PET
+        pet_confounds_wf = init_pet_confs_wf(
+            mem_gb=mem_gb['largemem'],
             metadata=all_metadata[0],
-            cifti_output=config.workflow.cifti_output,
-            name='carpetplot_wf',
+            freesurfer=config.workflow.run_reconall,
+            regressors_all_comps=config.workflow.regressors_all_comps,
+            regressors_fd_th=config.workflow.regressors_fd_th,
+            regressors_dvars_th=config.workflow.regressors_dvars_th,
+            name='pet_confounds_wf',
         )
 
-        if config.workflow.cifti_output:
-            workflow.connect(
-                pet_grayords_wf, 'outputnode.cifti_pet', carpetplot_wf, 'inputnode.cifti_pet',
-            )  # fmt:skip
-
-        def _last(inlist):
-            return inlist[-1]
+        ds_confounds = pe.Node(
+            DerivativesDataSink(
+                base_directory=petprep_dir,
+                desc='confounds',
+                suffix='timeseries',
+            ),
+            name='ds_confounds',
+            run_without_submitting=True,
+            mem_gb=config.DEFAULT_MEMORY_MIN_GB,
+        )
+        ds_confounds.inputs.source_file = pet_file
 
         workflow.connect([
-            (inputnode, carpetplot_wf, [
-                ('mni2009c2anat_xfm', 'inputnode.std2anat_xfm'),
+            (inputnode, pet_confounds_wf, [
+                ('t1w_tpms', 'inputnode.t1w_tpms'),
+                ('t1w_mask', 'inputnode.t1w_mask'),
             ]),
-            (pet_fit_wf, carpetplot_wf, [
+            (pet_fit_wf, pet_confounds_wf, [
                 ('outputnode.pet_mask', 'inputnode.pet_mask'),
+                ('outputnode.petref', 'inputnode.petref'),
+                ('outputnode.motion_xfm', 'inputnode.motion_xfm'),
                 ('outputnode.petref2anat_xfm', 'inputnode.petref2anat_xfm'),
             ]),
-            (pet_native_wf, carpetplot_wf, [
+            (pet_native_wf, pet_confounds_wf, [
                 ('outputnode.pet_native', 'inputnode.pet'),
             ]),
-            (pet_confounds_wf, carpetplot_wf, [
-                ('outputnode.confounds_file', 'inputnode.confounds_file'),
-                ('outputnode.crown_mask', 'inputnode.crown_mask'),
+            (pet_confounds_wf, ds_confounds, [
+                ('outputnode.confounds_file', 'in_file'),
+                ('outputnode.confounds_metadata', 'meta_dict'),
             ]),
         ])  # fmt:skip
+
+        if spaces.get_spaces(nonstandard=False, dim=(3,)):
+            carpetplot_wf = init_carpetplot_wf(
+                mem_gb=mem_gb['resampled'],
+                metadata=all_metadata[0],
+                cifti_output=config.workflow.cifti_output,
+                name='carpetplot_wf',
+            )
+
+            if config.workflow.cifti_output:
+                workflow.connect(
+                    pet_grayords_wf, 'outputnode.cifti_pet', carpetplot_wf, 'inputnode.cifti_pet',
+                )  # fmt:skip
+
+            def _last(inlist):
+                return inlist[-1]
+
+            workflow.connect([
+                (inputnode, carpetplot_wf, [
+                    ('mni2009c2anat_xfm', 'inputnode.std2anat_xfm'),
+                ]),
+                (pet_fit_wf, carpetplot_wf, [
+                    ('outputnode.pet_mask', 'inputnode.pet_mask'),
+                    ('outputnode.petref2anat_xfm', 'inputnode.petref2anat_xfm'),
+                ]),
+                (pet_native_wf, carpetplot_wf, [
+                    ('outputnode.pet_native', 'inputnode.pet'),
+                ]),
+                (pet_confounds_wf, carpetplot_wf, [
+                    ('outputnode.confounds_file', 'inputnode.confounds_file'),
+                    ('outputnode.crown_mask', 'inputnode.crown_mask'),
+                ]),
+            ])  # fmt:skip
 
     # Fill-in datasinks of reportlets seen so far
     for node in workflow.list_node_names():

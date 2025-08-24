@@ -343,6 +343,7 @@ def test_init_refmask_report_wf(tmp_path: Path):
     ds = wf.get_node('ds_report_refmask')
     assert ds.inputs.desc == 'refmask'
     assert ds.inputs.ref == 'test'
+    assert ds.inputs.suffix == 'pet'
 
 
 def test_reports_spec_contains_refmask():
