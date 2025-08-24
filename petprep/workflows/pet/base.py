@@ -720,7 +720,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
             ('outputnode.segmentation', 'inputnode.segmentation'),
             ('outputnode.dseg_tsv', 'inputnode.dseg_tsv'),
         ]),
-        (pet_tacs_wf, ds_pet_tacs, [('outputnode.timeseries', 'in_file')]),
+        (pet_tacs_wf, ds_pet_tacs, [('outputnode.tacs', 'in_file')]),
     ])  # fmt:skip
 
     if config.workflow.ref_mask_name:
@@ -752,7 +752,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
         workflow.connect([
             (pet_t1w_src, pet_ref_tacs_wf, [(pet_t1w_field, 'inputnode.pet_anat')]),
             (pet_fit_wf, pet_ref_tacs_wf, [('outputnode.refmask', 'inputnode.mask_file')]),
-            (pet_ref_tacs_wf, ds_ref_tacs, [('outputnode.timeseries', 'in_file')]),
+            (pet_ref_tacs_wf, ds_ref_tacs, [('outputnode.tacs', 'in_file')]),
         ])  # fmt:skip
 
     pet_confounds_wf = init_pet_confs_wf(
