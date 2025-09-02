@@ -119,23 +119,22 @@ jobs:
           path: dist
       - run: ls -lR
 
+      - name: Unpack sdist
+        run: |
+          tar --strip-components=1 -xzf dist/*/petprep-*.tar.gz
+
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/templateflow
-          key: templateflow-v1
       - name: Check wrapper version
         run: |
           echo n | uvx --from=$( ls dist/*/petprep_docker*.whl ) petprep-docker --version
 
-      - name: Unpack sdist
-        run: |
-          tar --strip-components=1 -xzf dist/*/petprep-*.tar.gz
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/templateflow
+          key: templateflow-v1
 
       - name: Install tox
         run: |
