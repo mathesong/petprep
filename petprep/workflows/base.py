@@ -81,7 +81,7 @@ def init_petprep_wf():
                 spaces=config.workflow.spaces.get_fs_spaces(),
                 minimum_fs_version='7.0.0',
             ),
-            name='fsdir_run_{}'.format(config.execution.run_uuid.replace('-', '_')),
+            name=f'fsdir_run_{config.execution.run_uuid.replace("-", "_")}',
             run_without_submitting=True,
         )
         if config.execution.fs_subjects_dir is not None:
@@ -329,7 +329,7 @@ It is released under the [CC0]\
     # allow to run with anat-fast-track on PET-only dataset
     if 't1w_preproc' in anatomical_cache and not subject_data['t1w']:
         config.loggers.workflow.debug(
-            'No T1w image found; using precomputed T1w image: %s', anatomical_cache['t1w_preproc']
+            f'No T1w image found; using precomputed T1w image: {anatomical_cache["t1w_preproc"]}'
         )
         workflow.connect([
             (bidssrc, bids_info, [(('pet', fix_multi_T1w_source_name), 'in_file')]),

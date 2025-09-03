@@ -172,13 +172,8 @@ def init_pet_wf(
     nvols, mem_gb = estimate_pet_mem_usage(pet_file)
 
     config.loggers.workflow.debug(
-        'Creating pet processing workflow for <%s> (%.2f GB / %d frames). '
-        'Memory resampled/largemem=%.2f/%.2f GB.',
-        pet_file,
-        mem_gb['filesize'],
-        nvols,
-        mem_gb['resampled'],
-        mem_gb['largemem'],
+        f'Creating pet processing workflow for <{pet_file}> ({mem_gb["filesize"]:.2f} GB / {nvols} frames). '
+        f'Memory resampled/largemem={mem_gb["resampled"]:.2f}/{mem_gb["largemem"]:.2f} GB.'
     )
 
     workflow = Workflow(name=_get_wf_name(pet_file, 'pet'))
@@ -834,7 +829,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
 
     else:
         config.loggers.workflow.warning(
-            'PET confounds will be skipped - series has only %d frame(s)', nvols
+            f'PET confounds will be skipped - series has only {nvols} frame(s)'
         )
 
     # Fill-in datasinks of reportlets seen so far

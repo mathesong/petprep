@@ -213,10 +213,10 @@ def zenodo(
 
     zenodo['contributors'] = [c for c in zenodo['contributors'] if c['name'] not in creator_names]
 
-    misses = set(miss_creators).intersection(miss_contributors)
-    if misses:
+    missing = {*miss_creators} & {*miss_contributors}
+    if missing:
         print(
-            f'Some people made commits, but are missing in .maint/ files: {", ".join(misses)}',
+            f'Some people made commits, but are missing in .maint/ files: {", ".join(sorted(missing))}.',
             file=sys.stderr,
         )
 
@@ -239,7 +239,7 @@ def zenodo(
         elif isinstance(creator['affiliation'], list):
             creator['affiliation'] = creator['affiliation'][0]
 
-    Path(zenodo_file).write_text('%s\n' % json.dumps(zenodo, indent=2))
+    Path(zenodo_file).write_text(f'{json.dumps(zenodo, indent=2)}\n')
 
 
 @cli.command()
@@ -287,7 +287,7 @@ def publication(
     aff_indexes = [
         ', '.join(
             [
-                '%d' % (affiliations.index(a) + 1)
+                f'{affiliations.index(a) + 1}'
                 for a in _aslist(author.get('affiliation', 'Unaffiliated'))
             ]
         )
@@ -300,21 +300,14 @@ def publication(
             file=sys.stderr,
         )
 
-    print('Authors (%d):' % len(hits))
-    print(
-        '%s.'
-        % '; '.join(
-            [
-                '{} \\ :sup:`{}`\\ '.format(i['name'], idx)
-                for i, idx in zip(hits, aff_indexes, strict=False)
-            ]
-        )
+    print(f'Authors ({len(hits)}):')
+    authors = '; '.join(
+        f'{i["name"]} \\ :sup:`{idx}`\\ ' for i, idx in zip(hits, aff_indexes, strict=False)
     )
+    print(f'{authors}.')
 
-    print(
-        '\n\nAffiliations:\n%s'
-        % '\n'.join([f'{i + 1: >2}. {a}' for i, a in enumerate(affiliations)])
-    )
+    lines = '\n'.join(f'{i + 1: >2}. {a}' for i, a in enumerate(affiliations))
+    print(f'\n\nAffiliations:\n{lines}')
 
 
 if __name__ == '__main__':
