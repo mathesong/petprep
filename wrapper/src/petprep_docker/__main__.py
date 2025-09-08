@@ -32,7 +32,7 @@ __bugreports__ = 'https://github.com/nipreps/petprep/issues'
 MISSING = """
 Image '{}' is missing
 Would you like to download? [Y/n] """
-PKG_PATH = '/opt/conda/envs/petprep/lib/python3.10/site-packages'
+PKG_PATH = '/opt/conda/envs/petprep/lib/python3.12/site-packages'
 TF_TEMPLATES = (
     'MNI152Lin',
     'MNI152NLin2009cAsym',
@@ -49,7 +49,7 @@ TF_TEMPLATES = (
     'fsaverage5',
     'fsaverage6',
 )
-NONSTANDARD_REFERENCES = ('anat', 'T1w', 'run', 'func', 'sbref', 'fsnative')
+NONSTANDARD_REFERENCES = ('anat', 'T1w', 'run', 'func', 'sbref', 'fsnative', 'pet')
 
 # Monkey-patch Py2 subprocess
 if not hasattr(subprocess, 'DEVNULL'):
