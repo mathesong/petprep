@@ -121,11 +121,11 @@ def init_pet_surf_wf(
     timing_parameters = prepare_timing_parameters(metadata)
 
     workflow = Workflow(name=name)
-    workflow.__desc__ = """\
+    workflow.__desc__ = f"""\
 The PET time-series were resampled onto the following surfaces
 (FreeSurfer reconstruction nomenclature):
-{out_spaces}.
-""".format(out_spaces=', '.join([f'*{s}*' for s in surface_spaces]))
+{', '.join([f'*{s}*' for s in surface_spaces])}.
+"""
 
     inputnode = pe.Node(
         niu.IdentityInterface(

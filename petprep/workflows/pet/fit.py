@@ -210,10 +210,10 @@ def init_pet_fit_wf(
         config.loggers.workflow.debug('3D PET file - motion correction not needed')
     if petref:
         petref_buffer.inputs.petref = petref
-        config.loggers.workflow.debug('(Re)using motion correction reference: %s', petref)
+        config.loggers.workflow.debug(f'(Re)using motion correction reference: {petref}')
     if hmc_xforms:
         hmc_buffer.inputs.hmc_xforms = hmc_xforms
-        config.loggers.workflow.debug('(Re)using motion correction transforms: %s', hmc_xforms)
+        config.loggers.workflow.debug(f'(Re)using motion correction transforms: {hmc_xforms}')
 
     timing_parameters = prepare_timing_parameters(metadata)
     frame_durations = timing_parameters.get('FrameDuration')
@@ -405,8 +405,7 @@ def init_pet_fit_wf(
     # Stage 4: Reference mask generation
     if config.workflow.ref_mask_name:
         config.loggers.workflow.info(
-            'PET Stage 4: Generating %s reference mask',
-            config.workflow.ref_mask_name,
+            f'PET Stage 4: Generating {config.workflow.ref_mask_name} reference mask'
         )
 
         refmask_wf = init_pet_refmask_wf(

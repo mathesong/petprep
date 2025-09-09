@@ -140,7 +140,7 @@ def main():
                 for crashfile in crashfolder.glob('crash*.*'):
                     process_crashfile(crashfile)
 
-        config.loggers.workflow.critical('PETPrep failed: %s', e)
+        config.loggers.workflow.critical(f'PETPrep failed: {e}')
         raise
     else:
         config.loggers.workflow.log(25, 'PETPrep finished successfully!')
