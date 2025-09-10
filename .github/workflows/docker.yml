@@ -41,6 +41,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get base image tag, check
+        id: base
+        run: |
+          export BASE_IMAGE=$( grep BASE_IMAGE= Dockerfile | cut -d= -f2 )
+          export BASE_IMAGE_NAME=${BASE_IMAGE%:*}
+          export BASE_TAG=${BASE_IMAGE#*:}
+          echo "image=$BASE_IMAGE" >> $GITHUB_OUTPUT
+          echo "name=$BASE_IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "tag=$BASE_TAG" >> $GITHUB_OUTPUT
+          env
+          if docker manifest inspect $BASE_IMAGE; then
+            echo "build=false" >> $GITHUB_OUTPUT
+          else
+            echo "build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build base image
+        if: steps.base.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.base
+          push: false
+          tags: ${{ steps.base.outputs.image }}
+          platforms: linux/amd64
+          cache-from: |
+            type=registry,ref=${{ steps.base.outputs.name }}:latest
+          cache-to: type=inline
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
