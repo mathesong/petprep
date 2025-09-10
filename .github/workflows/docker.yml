@@ -32,6 +32,8 @@ jobs:
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
@@ -61,10 +63,12 @@ jobs:
         if: steps.base.outputs.build == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: .
           file: Dockerfile.base
-          push: false
-          tags: ${{ steps.base.outputs.image }}
+          load: true
+          push: ${{ github.ref_name == 'main' }}
+          tags: |
+            ${{ steps.base.outputs.image }}
+            ${{ steps.base.outputs.name }}:latest
           platforms: linux/amd64
           cache-from: |
             type=registry,ref=${{ steps.base.outputs.name }}:latest
