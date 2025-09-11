@@ -357,9 +357,11 @@ FreeSurfer's ``mri_robust_template``.
     ])  # fmt:skip
 
     if auto_init_frame:
-        workflow.connect([
-            (thresh, find_highest_uptake_frame, [('out_file', 'in_files')]),
-            (find_highest_uptake_frame, robust_template, [('index', 'initial_timepoint')]),
-        ])
+        workflow.connect(
+            [
+                (thresh, find_highest_uptake_frame, [('out_file', 'in_files')]),
+                (find_highest_uptake_frame, robust_template, [('index', 'initial_timepoint')]),
+            ]
+        )
 
     return workflow
