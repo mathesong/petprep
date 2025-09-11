@@ -40,3 +40,20 @@ def test_init_pet_hmc_wf_nodes():
     assert 'split_frames' in names
     assert 'est_robust_hmc' in names
     assert 'convert_ref' in names
+
+
+def test_init_pet_hmc_wf_auto_inittp():
+    wf = init_pet_hmc_wf(mem_gb=1, omp_nthreads=1, initial_timepoint='auto')
+    names = wf.list_node_names()
+    assert 'find_highest_uptake_frame' in names
+
+
+def test_init_pet_hmc_wf_specific_inittp():
+    wf = init_pet_hmc_wf(
+        mem_gb=1, omp_nthreads=1, initial_timepoint=2, fixed_timepoint=True
+    )
+    names = wf.list_node_names()
+    assert 'find_highest_uptake_frame' not in names
+    node = wf.get_node('est_robust_hmc')
+    assert node.inputs.initial_timepoint == 2
+    assert node.inputs.fixed_timepoint is True

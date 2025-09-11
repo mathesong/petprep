@@ -147,7 +147,7 @@ def init_pet_hmc_wf(
     start_time: float = 120.0,
     frame_durations: Sequence[float] | None = None,
     frame_start_times: Sequence[float] | None = None,
-    initial_timepoint: int | None = None,
+    initial_timepoint: int | str | None = 'auto',
     fixed_timepoint: bool = False,
     name: str = 'pet_hmc_wf',
 ):
@@ -187,9 +187,9 @@ def init_pet_hmc_wf(
     frame_start_times : :class:`~typing.Sequence`\[:obj:`float`] or ``None``
         Optional list of frame onset times used together with
         ``frame_durations`` to locate the start frame.
-    initial_timepoint : :obj:`int` or ``None``
-        Index of the frame used to initialize motion correction. If ``None``
-        (default), the frame with the highest uptake is selected automatically.
+    initial_timepoint : :obj:`int`, ``'auto'`` or ``None``
+        Index of the frame used to initialize motion correction. If ``'auto'`` or
+        ``None`` (default), the frame with the highest uptake is selected automatically.
     fixed_timepoint : :obj:`bool`
         Whether to keep the initial time point fixed during robust template
         estimation (``fs.RobustTemplate``'s ``fixtp`` parameter).
@@ -290,7 +290,8 @@ FreeSurfer's ``mri_robust_template``.
         name='create_lta_list',
     )
 
-    if initial_timepoint is None:
+    auto_inittp = initial_timepoint in (None, 'auto')
+    if auto_inittp:
         find_highest_uptake_frame = pe.Node(
             niu.Function(
                 input_names=['in_files'],
@@ -312,8 +313,8 @@ FreeSurfer's ``mri_robust_template``.
         ),
         name='est_robust_hmc',
     )
-    if initial_timepoint is not None:
-        robust_template.inputs.initial_timepoint = initial_timepoint
+    if not auto_inittp:
+        robust_template.inputs.initial_timepoint = int(initial_timepoint)
     upd_xfm = pe.Node(
         niu.Function(
             input_names=['xforms', 'idx'],
@@ -353,7 +354,7 @@ FreeSurfer's ``mri_robust_template``.
         (ref_to_nii, outputnode, [('out_file', 'petref')]),
     ])  # fmt:skip
 
-    if initial_timepoint is None:
+    if auto_inittp:
         workflow.connect([
             (thresh, find_highest_uptake_frame, [('out_file', 'in_files')]),
             (find_highest_uptake_frame, robust_template, [('index', 'initial_timepoint')]),

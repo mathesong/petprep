@@ -305,3 +305,23 @@ def test_reference_mask_options(tmp_path, minimal_bids, monkeypatch):
     assert config.workflow.ref_mask_name == 'cerebellum'
     assert config.workflow.ref_mask_index == (3, 4)
     _reset_config()
+
+
+def test_hmc_inittp_parsing(tmp_path):
+    """Ensure --hmc-inittp accepts optional integers and defaults to auto."""
+    datapath = tmp_path / 'data'
+    outpath = tmp_path / 'out'
+    datapath.mkdir()
+
+    parser = _build_parser()
+    base_args = [str(datapath), str(outpath), 'participant']
+
+    opts = parser.parse_args(base_args)
+    assert opts.hmc_initial_timepoint == 'auto'
+
+    opts = parser.parse_args(base_args + ['--hmc-inittp'])
+    assert opts.hmc_initial_timepoint == 'auto'
+
+    opts = parser.parse_args(base_args + ['--hmc-inittp', '3', '--hmc-fixtp'])
+    assert opts.hmc_initial_timepoint == 3
+    assert opts.hmc_fixed_timepoint is True
