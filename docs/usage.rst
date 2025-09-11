@@ -192,14 +192,17 @@ registration (mri_robust_register) algorithm utilized settings optimized for PET
 scaling was enabled, automated sensitivity detection was activated, and the Frobenius norm threshold 
 for convergence was set at 0.0001, ensuring precise and consistent alignment across frames.
 
-Adaptive initialization is available with :option:`--hmc-inittp`, which evaluates the
-available frames and selects a stable one as the starting point for registration.
-The chosen frame can be locked in for reproducible runs by adding
-:option:`--hmc-fixtp`.
+By default, *PETPrep* evaluates the frames acquired after
+:option:`--hmc-start-time` and initializes motion correction with the
+frame exhibiting the highest tracer uptake. Provide a zero-based index
+with :option:`--hmc-inittp` to override this choice. Adding
+:option:`--hmc-fixtp` keeps whichever frame is selected (automatic or
+manual) fixed during robust template estimation to improve reproducibility.
 
-To edit the motion correction parameters and run the workflow, use: ::
+Examples: ::
 
-    $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60 --hmc-inittp --hmc-fixtp
+    $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
+    $ petprep /data/bids_root /out participant --hmc-inittp 10 --hmc-fixtp
 
 Segmentation
 ----------------

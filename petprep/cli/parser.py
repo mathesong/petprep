@@ -548,7 +548,7 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         default='auto',
         type=_int_or_auto,
         help=(
-            "Initial time point index for head-motion estimation; omit or use 'auto' "
+            "Initial frame index for head-motion estimation; omit or use 'auto' "
             'to select the frame with highest uptake.'
         ),
     )
@@ -556,7 +556,8 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '--hmc-fixtp',
         dest='hmc_fixed_timepoint',
         action='store_true',
-        help='Use a fixed reference time point for head-motion estimation.',
+        help=('Keep the chosen reference frame fixed during head-motion '
+              'estimation.'),
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
