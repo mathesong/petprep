@@ -281,6 +281,8 @@ def init_pet_fit_wf(
             start_time=config.workflow.hmc_start_time,
             frame_durations=frame_durations,
             frame_start_times=frame_start_times,
+            initial_timepoint=config.workflow.hmc_initial_timepoint,
+            fixed_timepoint=config.workflow.hmc_fixed_timepoint,
         )
 
         ds_hmc_wf = init_ds_hmc_wf(

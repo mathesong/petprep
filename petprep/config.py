@@ -596,6 +596,10 @@ class workflow(_Config):
     """FWHM for Gaussian smoothing prior to head-motion estimation."""
     hmc_start_time: float = 120.0
     """Time point (in seconds) at which head-motion estimation starts."""
+    hmc_initial_timepoint: int | None = None
+    """Index of initial frame for head-motion estimation (adaptive when unset)."""
+    hmc_fixed_timepoint: int | None = None
+    """Index of fixed frame during head-motion estimation (adaptive when unset)."""
     seg = 'gtm'
     """Segmentation approach ('gtm', 'brainstem', 'thalamicNuclei',
     'hippocampusAmygdala', 'wm', 'raphe', 'limbic')."""
