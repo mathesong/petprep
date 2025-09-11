@@ -391,8 +391,10 @@ parameters for each time-step are passed on to the
 
 The smoothing kernel width and onset of motion estimation can be
 customized via the :option:`--hmc-fwhm` and :option:`--hmc-start-time`
-command line options.  By default a 10 mm FWHM Gaussian is applied and
-estimation begins at 120 s.
+command line options. Adaptive initialization is supported with
+:option:`--hmc-inittp` and :option:`--hmc-fixtp`, which allow PETPrep to
+select and optionally fix a reference frame automatically. By default a
+10 mm FWHM Gaussian is applied and estimation begins at 120 s.
 
 Pre-processed PET in native space
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
