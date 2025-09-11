@@ -147,8 +147,8 @@ def init_pet_hmc_wf(
     start_time: float = 120.0,
     frame_durations: Sequence[float] | None = None,
     frame_start_times: Sequence[float] | None = None,
-    initial_timepoint: int | str | None = 'auto',
-    fixed_timepoint: bool = False,
+    initial_frame: int | str | None = 'auto',
+    fixed_frame: bool = False,
     name: str = 'pet_hmc_wf',
 ):
     r"""
@@ -187,10 +187,10 @@ def init_pet_hmc_wf(
     frame_start_times : :class:`~typing.Sequence`\[:obj:`float`] or ``None``
         Optional list of frame onset times used together with
         ``frame_durations`` to locate the start frame.
-    initial_timepoint : :obj:`int`, ``'auto'`` or ``None``
+    initial_frame : :obj:`int`, ``'auto'`` or ``None``
         Index of the frame used to initialize motion correction. If ``'auto'`` or
         ``None`` (default), the frame with the highest uptake is selected automatically.
-    fixed_timepoint : :obj:`bool`
+    fixed_frame : :obj:`bool`
         Whether to keep the initial time point fixed during robust template
         estimation (``fs.RobustTemplate``'s ``fixtp`` parameter).
     name : :obj:`str`
@@ -290,8 +290,8 @@ FreeSurfer's ``mri_robust_template``.
         name='create_lta_list',
     )
 
-    auto_inittp = initial_timepoint in (None, 'auto')
-    if auto_inittp:
+    auto_init_frame = initial_frame in (None, 'auto')
+    if auto_init_frame:
         find_highest_uptake_frame = pe.Node(
             niu.Function(
                 input_names=['in_files'],
@@ -309,12 +309,12 @@ FreeSurfer's ``mri_robust_template``.
             average_metric='mean',
             args='--cras',
             num_threads=omp_nthreads,
-            fixed_timepoint=fixed_timepoint,
+            fixed_timepoint=fixed_frame,
         ),
         name='est_robust_hmc',
     )
-    if not auto_inittp:
-        robust_template.inputs.initial_timepoint = int(initial_timepoint)
+    if not auto_init_frame:
+        robust_template.inputs.initial_timepoint = int(initial_frame)
     upd_xfm = pe.Node(
         niu.Function(
             input_names=['xforms', 'idx'],
@@ -354,7 +354,7 @@ FreeSurfer's ``mri_robust_template``.
         (ref_to_nii, outputnode, [('out_file', 'petref')]),
     ])  # fmt:skip
 
-    if auto_inittp:
+    if auto_init_frame:
         workflow.connect([
             (thresh, find_highest_uptake_frame, [('out_file', 'in_files')]),
             (find_highest_uptake_frame, robust_template, [('index', 'initial_timepoint')]),
