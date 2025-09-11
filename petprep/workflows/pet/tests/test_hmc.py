@@ -57,3 +57,4 @@ def test_init_pet_hmc_wf_specific_inittp():
     node = wf.get_node('est_robust_hmc')
     assert node.inputs.initial_timepoint == 2
     assert node.inputs.fixed_timepoint is True
+    assert node.inputs.no_iteration is True

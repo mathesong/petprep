@@ -192,7 +192,8 @@ def init_pet_hmc_wf(
         ``None`` (default), the frame with the highest uptake is selected automatically.
     fixed_frame : :obj:`bool`
         Whether to keep the initial time point fixed during robust template
-        estimation (``fs.RobustTemplate``'s ``fixtp`` parameter).
+        estimation (``fs.RobustTemplate``'s ``fixtp`` parameter). If ``True``,
+        iterations are skipped to reduce runtime.
     name : :obj:`str`
         Name of workflow (default: ``pet_hmc_wf``)
 
@@ -310,6 +311,7 @@ FreeSurfer's ``mri_robust_template``.
             args='--cras',
             num_threads=omp_nthreads,
             fixed_timepoint=fixed_frame,
+            no_iteration=fixed_frame,
         ),
         name='est_robust_hmc',
     )
