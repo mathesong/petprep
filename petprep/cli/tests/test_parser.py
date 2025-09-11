@@ -307,8 +307,8 @@ def test_reference_mask_options(tmp_path, minimal_bids, monkeypatch):
     _reset_config()
 
 
-def test_hmc_inittp_parsing(tmp_path):
-    """Ensure --hmc-inittp accepts optional integers and defaults to auto."""
+def test_hmc_init_frame_parsing(tmp_path):
+    """Ensure --hmc-init-frame accepts optional integers and defaults to auto."""
     datapath = tmp_path / 'data'
     outpath = tmp_path / 'out'
     datapath.mkdir()
@@ -317,11 +317,11 @@ def test_hmc_inittp_parsing(tmp_path):
     base_args = [str(datapath), str(outpath), 'participant']
 
     opts = parser.parse_args(base_args)
-    assert opts.hmc_initial_timepoint == 'auto'
+    assert opts.hmc_init_frame == 'auto'
 
-    opts = parser.parse_args(base_args + ['--hmc-inittp'])
-    assert opts.hmc_initial_timepoint == 'auto'
+    opts = parser.parse_args(base_args + ['--hmc-init-frame'])
+    assert opts.hmc_init_frame == 'auto'
 
-    opts = parser.parse_args(base_args + ['--hmc-inittp', '3', '--hmc-fixtp'])
-    assert opts.hmc_initial_timepoint == 3
-    assert opts.hmc_fixed_timepoint is True
+    opts = parser.parse_args(base_args + ['--hmc-init-frame', '3', '--hmc-fix-frame'])
+    assert opts.hmc_init_frame == 3
+    assert opts.hmc_fix_frame is True

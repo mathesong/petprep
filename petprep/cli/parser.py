@@ -541,8 +541,8 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         help='Time (in seconds) after which head-motion estimation is performed.',
     )
     g_hmc.add_argument(
-        '--hmc-inittp',
-        dest='hmc_initial_timepoint',
+        '--hmc-init-frame',
+        dest='hmc_init_frame',
         nargs='?',
         const='auto',
         default='auto',
@@ -553,8 +553,8 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         ),
     )
     g_hmc.add_argument(
-        '--hmc-fixtp',
-        dest='hmc_fixed_timepoint',
+        '--hmc-fix-frame',
+        dest='hmc_fix_frame',
         action='store_true',
         help=('Keep the chosen reference frame fixed during head-motion '
               'estimation.'),

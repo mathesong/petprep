@@ -195,14 +195,14 @@ for convergence was set at 0.0001, ensuring precise and consistent alignment acr
 By default, *PETPrep* evaluates the frames acquired after
 :option:`--hmc-start-time` and initializes motion correction with the
 frame exhibiting the highest tracer uptake. Provide a zero-based index
-with :option:`--hmc-inittp` to override this choice. Adding
-:option:`--hmc-fixtp` keeps whichever frame is selected (automatic or
+with :option:`--hmc-init-frame` to override this choice. Adding
+:option:`--hmc-fix-frame` keeps whichever frame is selected (automatic or
 manual) fixed during robust template estimation to improve reproducibility.
 
 Examples: ::
 
     $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
-    $ petprep /data/bids_root /out participant --hmc-inittp 10 --hmc-fixtp
+    $ petprep /data/bids_root /out participant --hmc-init-frame 10 --hmc-fix-frame
 
 Segmentation
 ----------------
