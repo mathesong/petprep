@@ -536,6 +536,19 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         type=float,
         help='Time (in seconds) after which head-motion estimation is performed.',
     )
+    g_hmc.add_argument(
+        '--hmc-inittp',
+        dest='hmc_initial_timepoint',
+        action='store',
+        type=int,
+        help='Initial time point index for head-motion estimation.',
+    )
+    g_hmc.add_argument(
+        '--hmc-fixtp',
+        dest='hmc_fixed_timepoint',
+        action='store_true',
+        help='Use a fixed reference time point for head-motion estimation.',
+    )
 
     g_seg = parser.add_argument_group('Segmentation options')
     g_seg.add_argument(
