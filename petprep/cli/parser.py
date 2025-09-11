@@ -556,8 +556,7 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '--hmc-fix-frame',
         dest='hmc_fix_frame',
         action='store_true',
-        help=('Keep the chosen reference frame fixed during head-motion '
-              'estimation.'),
+        help=('Keep the chosen reference frame fixed during head-motion estimation.'),
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
