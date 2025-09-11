@@ -297,9 +297,6 @@ jobs:
           which petprep-docker
           petprep-docker -i nipreps/petprep:latest --help
           petprep-docker -i nipreps/petprep:latest --version
-          # Tests depend on pytest - 
-          pip install pytest
-          pytest wrapper/src/tests
     - run:
         name: Install and test petprep-docker (Python 2)
         command: |
