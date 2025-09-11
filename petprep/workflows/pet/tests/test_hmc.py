@@ -43,14 +43,14 @@ def test_init_pet_hmc_wf_nodes():
 
 
 def test_init_pet_hmc_wf_auto_inittp():
-    wf = init_pet_hmc_wf(mem_gb=1, omp_nthreads=1, initial_timepoint='auto')
+    wf = init_pet_hmc_wf(mem_gb=1, omp_nthreads=1, initial_frame='auto')
     names = wf.list_node_names()
     assert 'find_highest_uptake_frame' in names
 
 
 def test_init_pet_hmc_wf_specific_inittp():
     wf = init_pet_hmc_wf(
-        mem_gb=1, omp_nthreads=1, initial_timepoint=2, fixed_timepoint=True
+        mem_gb=1, omp_nthreads=1, initial_frame=2, fixed_frame=True
     )
     names = wf.list_node_names()
     assert 'find_highest_uptake_frame' not in names
