@@ -91,7 +91,7 @@ def _build_parser(**kwargs):
         if value < 1:
             raise parser.error("Argument can't be less than one.")
         return value
-    
+
     def _int_or_auto(value):
         """Parse an integer value or the special 'auto' keyword."""
         return 'auto' if value == 'auto' else int(value)
