@@ -241,7 +241,6 @@ jobs:
           keys:
           - data-v1-{{ checksum "remote_stamp.txt" }}
           - data-v1-
-          - data-v0-
       - run:
           name: Sync nipreps-data/ds004856.git
           command: |
@@ -274,6 +273,39 @@ jobs:
           - fslicense
           - ds005/nipype.cfg
 
+  test_ds004856:
+    executor: general
+    steps:
+    - checkout:
+        path: *src
+    - check-skip:
+        check: ds004856
+    - attach_workspace:
+        at: /tmp
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - restore_cache:
+        keys:
+        - data-v1-
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run: *setup_petprep_docker
+    - run:
+        name: Run PETPrep with full precomputed derivatives
+        no_output_timeout: 2h
+        command: |
+          petprep-docker -i nipreps/petprep:latest \
+            /tmp/ds004856 /tmp/ds004856-petprep participant \
+            --fs-subjects-dir /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer \
+            --fs-no-resume --derivatives petprep=/tmp/ds004856/derivatives/petprep \
+            --output-spaces MNI152NLin2009cAsym
+
   test_pytest:
     executor: general
     steps:
@@ -291,7 +323,7 @@ jobs:
         - /tmp/images
     - restore_cache:
         keys:
-        - data-v0-{{ .Branch }}-{{ .Revision }}
+        - data-v1-
     - docker/install-docker-credential-helper
     - docker-auth
     - setup-docker-registry
@@ -437,6 +469,16 @@ workflows:
             - /docs?\/.*/
             - /tests?\/.*/
             - /docker\/.*/
+          tags:
+            only: /.*/
+
+    - test_ds004856:
+        context:
+        - nipreps-common
+        requires:
+        - build
+        - get_data
+        filters:
           tags:
             only: /.*/
 
