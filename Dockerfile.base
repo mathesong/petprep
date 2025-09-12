@@ -74,6 +74,7 @@ RUN apt-get update && \
                     libgomp1 \
                     libglib2.0-0 \
                     libglu1-mesa \
+                    libopenblas0-openmp \
                     lsb-release \
                     netbase \
                     tcsh \
