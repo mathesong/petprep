@@ -1,14 +1,3 @@
-# reusable anchors
-_machine_defaults: &machine_defaults
-  environment:
-    TZ: "/usr/share/zoneinfo/America/Los_Angeles"
-    SCRATCH: "/scratch"
-  machine:
-    image: default
-    docker_layer_caching: true
-  working_directory: /tmp/src/petprep
-  resource_class: large
-
 _docker_auth: &docker_auth
   name: Docker authentication
   command: |
@@ -83,6 +72,16 @@ _check_outputs: &check_outputs
     diff /tmp/${DATASET}/test/{full,outputs}.out
 
 version: 2.1
+executors:
+  general:
+    machine:
+      image: default
+      docker_layer_caching: true
+    resource_class: large
+    working_directory: /tmp/src/petprep
+    environment:
+      TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+      SCRATCH: "/scratch"
 aliases:
 - &src "/tmp/src/petprep"
 orbs:
@@ -90,7 +89,7 @@ orbs:
 
 jobs:
   build_clean:
-    <<: *machine_defaults
+    executor: general
     environment:
       DOCKER_BUILDKIT: 1
     steps:
@@ -116,7 +115,7 @@ jobs:
             --build-arg VERSION="$THISVERSION" .
 
   build:
-    <<: *machine_defaults
+    executor: general
     environment:
       DOCKER_BUILDKIT: 1
     steps:
@@ -216,7 +215,7 @@ jobs:
         - /tmp/images
 
   get_data:
-    <<: *machine_defaults
+    executor: general
     steps:
     - restore_cache:
         keys:
@@ -245,7 +244,7 @@ jobs:
         - ds005/nipype.cfg
 
   test_pytest:
-    <<: *machine_defaults
+    executor: general
     environment:
       CHECK_PYTEST: true
     steps:
@@ -307,7 +306,7 @@ jobs:
         path: /tmp/data/reports
 
   deploy_docker_patches:
-    <<: *machine_defaults
+    executor: general
     working_directory: *src
     steps:
     - run:
@@ -337,7 +336,7 @@ jobs:
           docker push nipreps/petprep:${CIRCLE_BRANCH##*[/+]}
 
   deploy_docker:
-    <<: *machine_defaults
+    executor: general
     steps:
     - checkout:
         path: *src
