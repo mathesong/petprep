@@ -9,6 +9,7 @@ from petprep.reports.core import generate_reports
 from ... import config, data
 
 data_dir = data.load('tests')
+pet_source = data_dir / 'work' / 'reportlets' / 'petprep' / 'sub-01' / 'pet'
 
 
 # Test with and without sessions' aggregation
@@ -111,12 +112,18 @@ def test_ReportSeparation(
         )
 
 
+@pytest.mark.skipif(
+    not pet_source.exists(),
+    reason='Package installed - large test data directory excluded from wheel',
+)
 def test_pet_report(tmp_path, monkeypatch):
     fake_uuid = 'fake_uuid'
 
-    pet_source = data_dir / 'work' / 'reportlets' / 'petprep' / 'sub-01' / 'pet'
     sub_dir = tmp_path / 'sub-01' / 'figures'
     sub_dir.mkdir(parents=True)
+
+    if not pet_source.exists():
+        pytest.skip('Package installed - large test data directory excluded from wheel')
 
     for fl in [
         'sub-01_desc-about_T1w.html',

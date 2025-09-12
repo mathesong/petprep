@@ -8,9 +8,13 @@ positron emission tomography (PET) imaging.
   :target: https://pypi.python.org/pypi/petprep/
   :alt: Latest Version
 
-.. image:: https://github.com/nipreps/petprep/actions/workflows/tests.yml/badge.svg
-  :target: https://github.com/nipreps/petprep/actions/workflows/tests.yml
-  :alt: Stable tests
+.. image:: https://codecov.io/gh/nipreps/petprep/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/nipreps/petprep
+   :alt: Code coverage
+
+.. image:: https://dl.circleci.com/status-badge/img/gh/nipreps/petprep/tree/main.svg?style=svg
+   :target: https://dl.circleci.com/status-badge/redirect/gh/nipreps/petprep/tree/main
+   :alt: CircleCI build
 
 .. image:: https://readthedocs.org/projects/petprep/badge/?version=latest
   :target: https://petprep.org/en/latest/?badge=latest

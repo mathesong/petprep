@@ -1,70 +1,3 @@
-# reusable anchors
-_machine_defaults: &machine_defaults
-  environment:
-    TZ: "/usr/share/zoneinfo/America/Los_Angeles"
-    SCRATCH: "/scratch"
-  machine:
-    image: default
-    docker_layer_caching: true
-  working_directory: /tmp/src/petprep
-  resource_class: large
-
-_python_defaults: &python_defaults
-  docker:
-  - image: cimg/python:3.12
-  working_directory: /tmp/src/petprep
-
-_docker_auth: &docker_auth
-  name: Docker authentication
-  command: |
-    if [[ -n $DOCKER_PAT ]]; then
-      echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
-    fi
-
-_setup_docker_registry: &setup_docker_registry
-  name: Set up Docker registry
-  command: |
-    if [[ -f /tmp/images/registry.tar.gz ]]; then
-      echo "Loading saved registry image"
-      docker load < /tmp/images/registry.tar.gz
-    else
-      echo "Pulling registry image from DockerHub"
-      docker pull registry:2
-    fi
-    docker run -d -p 5000:5000 --restart=always --name=registry \
-        -v /tmp/docker:/var/lib/registry registry:2
-
-_pull_from_registry: &pull_from_registry
-  name: Pull and tag image from local registry
-  command: |
-    docker pull localhost:5000/petprep
-    docker tag localhost:5000/petprep nipreps/petprep:latest
-
-_check_skip_job: &check_skip_job
-  name: Check commit message and determine if job should be skipped
-  command: |
-    set +e
-    cd /tmp/src/petprep
-    COMMIT_MSG="$(git show -s --format=%s)"
-    DOCBUILD="$(echo ${COMMIT_MSG} | grep -i -E '^docs?(\(\w+\))?:')"
-    SKIP_ALL="$(echo ${COMMIT_MSG} | grep -i -E '\[skipcircle\]')"
-    SKIP_PYTEST="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?tests\]')"
-
-    # no skipping if tagged build
-    if [[ -n "$CIRCLETAG" ]]; then
-      exit 0
-    elif [[ -n "$DOCSBUILD" ]]; then  # always try to skip docs builds
-      echo "Only docs build"
-      circleci step halt
-    elif [ -n "$SKIP_ALL" ]; then
-      echo "Skipping all!"
-      circleci step halt
-    elif [ -n "$CHECK_PYTEST" -a -n "$SKIP_PYTEST" ]; then
-      echo "Skipping pytest"
-      circleci step halt
-    fi
-    echo "No skip"
-
 _setup_petprep_docker: &setup_petprep_docker
   name: Install PETPrep's docker wrapper
   command: |
@@ -88,21 +21,93 @@ _check_outputs: &check_outputs
     diff /tmp/${DATASET}/test/{full,outputs}.out
 
 version: 2.1
+executors:
+  general:
+    machine:
+      image: default
+      docker_layer_caching: true
+    resource_class: large
+    working_directory: /tmp/src/petprep
+    environment:
+      TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+      SCRATCH: "/scratch"
+  python:
+    docker:
+      - image: cimg/python:3.12
+    working_directory: /tmp/src/petprep
 aliases:
 - &src "/tmp/src/petprep"
 orbs:
   docker: circleci/docker@2.1.4
 
+commands:
+  docker-auth:
+    description: Authenticate with DockerHub
+    steps:
+      - run: |
+          if [[ -n $DOCKER_PAT ]]; then
+            echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
+          fi
+  setup-docker-registry:
+    description: Set up Docker registry
+    steps:
+      - run: |
+          if [[ -f /tmp/images/registry.tar.gz ]]; then
+            echo "Loading saved registry image"
+            docker load < /tmp/images/registry.tar.gz
+          else
+            echo "Pulling registry image from DockerHub"
+            docker pull registry:2
+          fi
+          docker run -d -p 5000:5000 --restart=always --name=registry \
+              -v /tmp/docker:/var/lib/registry registry:2
+  pull-from-registry:
+    description: Pull and tag image from local registry
+    steps:
+      - run: |
+          docker pull localhost:5000/petprep
+          docker tag localhost:5000/petprep nipreps/petprep:latest
+  check-skip:
+    parameters:
+      check:
+        default: circle
+        type: string
+    steps:
+      - run:
+          name: Check commit message and determine if job should be skipped
+          command: |
+            set +e
+            cd /tmp/src/petprep
+            COMMIT_MSG="$(git show -s --format=%s)"
+            DOCBUILD="$(echo ${COMMIT_MSG} | grep -i -E '^docs?(\(\w+\))?:')"
+            SKIP_ALL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?circle\]')"
+            SKIP_LOCAL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?<<parameters.check>>\]')"
+
+            # no skipping if tagged build
+            if [[ -n "$CIRCLETAG" ]]; then
+              exit 0
+            elif [[ -n "$DOCSBUILD" ]]; then  # always try to skip docs builds
+              echo "Only docs build"
+              circleci step halt
+            elif [ -n "$SKIP_ALL" ]; then
+              echo "Skipping all"
+              circleci step halt
+            elif [ -n "$SKIP_LOCAL" ]; then
+              echo "Skipping <<parameters.check>>"
+              circleci step halt
+            fi
+            echo "No skip"
+
 jobs:
   build_clean:
-    <<: *machine_defaults
+    executor: general
     environment:
       DOCKER_BUILDKIT: 1
     steps:
     - checkout:
         path: *src
     - docker/install-docker-credential-helper
-    - run: *docker_auth
+    - docker-auth
     - run:
         name: Build Docker image
         no_output_timeout: 60m
@@ -121,13 +126,13 @@ jobs:
             --build-arg VERSION="$THISVERSION" .
 
   build:
-    <<: *machine_defaults
+    executor: general
     environment:
       DOCKER_BUILDKIT: 1
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip
     - restore_cache:
         keys:
         - build-v2-{{ .Branch }}-{{ .Revision }}
@@ -139,11 +144,28 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
+    - docker-auth
+    - setup-docker-registry
     - run:
-        name: Create named builder
-        command: docker buildx create --use --name=builder --driver=docker-container
+        name: Get base image information
+        command: |
+          export BASE_IMAGE=$( grep BASE_IMAGE= Dockerfile | cut -d= -f2 )
+          export BASE_IMAGE_NAME=${BASE_IMAGE%:*}
+          export BASE_TAG=${BASE_IMAGE#*:}
+          echo "BASE_IMAGE=$BASE_IMAGE" >> $BASH_ENV
+          echo "BASE_IMAGE_NAME=$BASE_IMAGE_NAME" >> $BASH_ENV
+          echo "BASE_TAG=$BASE_TAG" >> $BASH_ENV
+          env
+    - run:
+        name: Build base image, if needed
+        command: |
+          if ! docker manifest inspect $BASE_IMAGE; then
+            docker buildx build --load \
+                --cache-from $BASE_IMAGE_NAME:latest \
+                -t $BASE_IMAGE \
+                --platform linux/amd64 \
+                -f Dockerfile.base .
+          fi
     - run:
         name: Build Docker image
         no_output_timeout: 60m
@@ -159,7 +181,7 @@ jobs:
             echo "them to your fork with ``git push origin --tags``"
           fi
           # Build docker image
-          docker buildx build --load --builder builder \
+          docker buildx build --load \
               --cache-from localhost:5000/petprep \
               --cache-from nipreps/petprep:latest \
               -t nipreps/petprep:latest \
@@ -204,42 +226,64 @@ jobs:
         - /tmp/images
 
   get_data:
-    <<: *machine_defaults
+    executor: python
     steps:
-    - restore_cache:
-        keys:
-        - data-v0-{{ .Branch }}-{{ .Revision }}
-        - data-v0--{{ .Revision }}
-        - data-v0-{{ .Branch }}-
-        - data-v0-master-
-        - data-v0-
-    - run:
-        name: Store FreeSurfer license file
-        command: |
-          mkdir -p /tmp/fslicense
-          cd /tmp/fslicense
-          echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IGxpY2Vuc2UudHh0Cg==" | base64 -d | sh
-    - run:
-        name: Create Nipype config files
-        command: |
-          mkdir -p /tmp/ds005
-          printf "[execution]\nstop_on_first_crash = true\n" > /tmp/ds005/nipype.cfg
-          echo "poll_sleep_duration = 0.01" >> /tmp/ds005/nipype.cfg
-          echo "hash_method = content" >> /tmp/ds005/nipype.cfg
-    - persist_to_workspace:
-        root: /tmp
-        paths:
-        - fslicense
-        - ds005/nipype.cfg
+      - run: |
+          uv self update
+          uv tool install git-annex
+          uv tool install --with-executables-from=datalad-osf,datalad-next datalad
+      - run: |
+          git ls-remote --exit-code https://gin.g-node.org/nipreps-data/ds004856.git HEAD > remote_stamp.txt
+      - run: |
+          git config --global user.name "CircleCI User"
+          git config --global user.email "email@domain.tld"
+      - restore_cache:
+          keys:
+          - data-v1-{{ checksum "remote_stamp.txt" }}
+          - data-v1-
+      - run:
+          name: Sync nipreps-data/ds004856.git
+          command: |
+            datalad install -r -s https://gin.g-node.org/nipreps-data/ds004856 /tmp/ds004856
+            datalad update -d /tmp/ds004856 --merge
+            datalad get -d /tmp/ds004856 -J4 \
+              /tmp/ds004856/sub-1023 \
+              /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer/sub-1023/{mri,surf,stats} \
+              /tmp/ds004856/derivatives/petprep/sub-1023
+      - save_cache:
+         key: data-v1-{{ checksum "remote_stamp.txt" }}
+         paths:
+            - /tmp/ds004856
+      - run:
+          name: Store FreeSurfer license file
+          command: |
+            mkdir -p /tmp/fslicense
+            cd /tmp/fslicense
+            echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IGxpY2Vuc2UudHh0Cg==" | base64 -d | sh
+      - run:
+          name: Create Nipype config files
+          command: |
+            mkdir -p /tmp/ds005
+            printf "[execution]\nstop_on_first_crash = true\n" > /tmp/ds005/nipype.cfg
+            echo "poll_sleep_duration = 0.01" >> /tmp/ds005/nipype.cfg
+            echo "hash_method = content" >> /tmp/ds005/nipype.cfg
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+          - fslicense
+          - ds005/nipype.cfg
 
-  test_pytest:
-    <<: *machine_defaults
+  test_ds004856:
+    executor: general
     environment:
-      CHECK_PYTEST: true
+      FS_LICENSE: /tmp/fslicense/license.txt
+      MIGAS_OPTOUT: 1
+      NO_ET: 1
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip:
+        check: ds004856
     - attach_workspace:
         at: /tmp
     - restore_cache:
@@ -250,11 +294,53 @@ jobs:
         - /tmp/images
     - restore_cache:
         keys:
-        - data-v0-{{ .Branch }}-{{ .Revision }}
+        - data-v1-
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run: *setup_petprep_docker
+    - run:
+        name: Install git-annex
+        command: |
+          command -v git-annex || pip install git-annex
+    - run:
+        name: Unlock files
+        command: |
+          git -C /tmp/ds004856/ annex unlock .
+    - run:
+        name: Run PETPrep with full precomputed derivatives
+        no_output_timeout: 2h
+        command: |
+          petprep-docker -i nipreps/petprep:latest \
+            /tmp/ds004856 /tmp/ds004856-petprep participant \
+            --fs-subjects-dir /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer \
+            --fs-no-resume --derivatives petprep=/tmp/ds004856/derivatives/petprep \
+            --output-spaces MNI152NLin2009cAsym \
+            --no-msm
+
+  test_pytest:
+    executor: general
+    steps:
+    - checkout:
+        path: *src
+    - check-skip:
+        check: tests
+    - attach_workspace:
+        at: /tmp
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - restore_cache:
+        keys:
+        - data-v1-
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Run PETPrep tests
         no_output_timeout: 2h
@@ -280,9 +366,6 @@ jobs:
           which petprep-docker
           petprep-docker -i nipreps/petprep:latest --help
           petprep-docker -i nipreps/petprep:latest --version
-          # Tests depend on pytest - 
-          pip install pytest
-          pytest wrapper/src/tests
     - run:
         name: Install and test petprep-docker (Python 2)
         command: |
@@ -298,7 +381,7 @@ jobs:
         path: /tmp/data/reports
 
   deploy_docker_patches:
-    <<: *machine_defaults
+    executor: general
     working_directory: *src
     steps:
     - run:
@@ -315,9 +398,9 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Deploy to Docker Hub
         no_output_timeout: 40m
@@ -328,11 +411,11 @@ jobs:
           docker push nipreps/petprep:${CIRCLE_BRANCH##*[/+]}
 
   deploy_docker:
-    <<: *machine_defaults
+    executor: general
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip
     - restore_cache:
         keys:
         - build-v2-{{ .Branch }}-{{ .Revision }}
@@ -340,9 +423,9 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Deploy to Docker Hub
         no_output_timeout: 40m
@@ -357,70 +440,6 @@ jobs:
               docker push nipreps/petprep:$CIRCLE_TAG
             fi
           fi
-
-  test_deploy_pypi:
-    <<: *python_defaults
-    steps:
-    - checkout
-    - run:
-        name: Update build tools
-        command: pip install --upgrade build twine hatch
-    - run:
-        name: Build PETPrep
-        command: python -m build
-    - run:
-        name: Twine check petprep
-        command: twine check dist/*
-    - run:
-        name: Pre-run hatch version
-        command: hatch version
-    - store_artifacts:
-        path: /tmp/src/petprep/dist
-    - run:
-        name: Check sdist distribution
-        command: |
-          THISVERSION=$( hatch version )
-          THISVERSION=${CIRCLE_TAG:-$THISVERSION}
-          virtualenv --python=python sdist
-          source sdist/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install dist/petprep*.tar.gz
-          which petprep | grep sdist\\/bin
-          INSTALLED_VERSION=$(petprep --version)
-          INSTALLED_VERSION=${INSTALLED_VERSION%$'\r'}
-          INSTALLED_VERSION=${INSTALLED_VERSION#*"PETPrep v"}
-          echo "VERSION: \"$THISVERSION\""
-          echo "INSTALLED: \"$INSTALLED_VERSION\""
-          test "$INSTALLED_VERSION" = "$THISVERSION"
-    - run:
-        name: Check wheel distribution
-        command: |
-          THISVERSION=$( hatch version )
-          THISVERSION=${CIRCLE_TAG:-$THISVERSION}
-          virtualenv --python=python wheel
-          source wheel/bin/activate
-          python -m pip install dist/petprep*.whl
-          which petprep | grep wheel\\/bin
-          INSTALLED_VERSION=$(petprep --version)
-          INSTALLED_VERSION=${INSTALLED_VERSION%$'\r'}
-          INSTALLED_VERSION=${INSTALLED_VERSION#*"PETPrep v"}
-          echo "VERSION: \"$THISVERSION\""
-          echo "INSTALLED: \"$INSTALLED_VERSION\""
-          test "$INSTALLED_VERSION" = "$THISVERSION"
-
-  deploy_pypi:
-    <<: *python_defaults
-    steps:
-    - checkout
-    - run:
-        name: Update build tools
-        command: pip install --upgrade build twine
-    - run:
-        name: Build PETPrep
-        command: python -m build
-    - run:
-        name: Upload packages to PyPI
-        command: python -m twine upload dist/petprep*
 
   deployable:
     docker:
@@ -466,14 +485,13 @@ workflows:
           tags:
             only: /.*/
 
-    - test_deploy_pypi:
+    - test_ds004856:
         context:
         - nipreps-common
+        requires:
+        - build
+        - get_data
         filters:
-          branches:
-            only:
-            - /rel\/.*/
-            - /maint\/.*/
           tags:
             only: /.*/
 
@@ -501,7 +519,6 @@ workflows:
 
     - deployable:
         requires:
-        - test_deploy_pypi
         - test_pytest
         filters:
           branches:
@@ -517,16 +534,5 @@ workflows:
         filters:
           branches:
             only: master
-          tags:
-            only: /.*/
-
-    - deploy_pypi:
-        context:
-        - nipreps-common
-        requires:
-        - deployable
-        filters:
-          branches:
-            ignore: /.*/
           tags:
             only: /.*/
