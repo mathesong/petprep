@@ -128,7 +128,7 @@ exclude = ".*"
 
 [tool.pytest.ini_options]
 minversion = "6"
-testpaths = ["petprep"]
+testpaths = ["petprep", "wrapper/src"]
 log_cli_level = "INFO"
 xfail_strict = true
 norecursedirs = [".git"]
@@ -201,5 +201,6 @@ omit = [
 [tool.coverage.paths]
 source = [
   "petprep",
+  "wrapper",
   "**/site-packages/petprep"
 ]
