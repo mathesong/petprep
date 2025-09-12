@@ -1,29 +1,3 @@
-_docker_auth: &docker_auth
-  name: Docker authentication
-  command: |
-    if [[ -n $DOCKER_PAT ]]; then
-      echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
-    fi
-
-_setup_docker_registry: &setup_docker_registry
-  name: Set up Docker registry
-  command: |
-    if [[ -f /tmp/images/registry.tar.gz ]]; then
-      echo "Loading saved registry image"
-      docker load < /tmp/images/registry.tar.gz
-    else
-      echo "Pulling registry image from DockerHub"
-      docker pull registry:2
-    fi
-    docker run -d -p 5000:5000 --restart=always --name=registry \
-        -v /tmp/docker:/var/lib/registry registry:2
-
-_pull_from_registry: &pull_from_registry
-  name: Pull and tag image from local registry
-  command: |
-    docker pull localhost:5000/petprep
-    docker tag localhost:5000/petprep nipreps/petprep:latest
-
 _check_skip_job: &check_skip_job
   name: Check commit message and determine if job should be skipped
   command: |
@@ -87,6 +61,34 @@ aliases:
 orbs:
   docker: circleci/docker@2.1.4
 
+commands:
+  docker-auth:
+    description: Authenticate with DockerHub
+    steps:
+      - run: |
+          if [[ -n $DOCKER_PAT ]]; then
+            echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
+          fi
+  setup-docker-registry:
+    description: Set up Docker registry
+    steps:
+      - run: |
+          if [[ -f /tmp/images/registry.tar.gz ]]; then
+            echo "Loading saved registry image"
+            docker load < /tmp/images/registry.tar.gz
+          else
+            echo "Pulling registry image from DockerHub"
+            docker pull registry:2
+          fi
+          docker run -d -p 5000:5000 --restart=always --name=registry \
+              -v /tmp/docker:/var/lib/registry registry:2
+  pull-from-registry:
+    description: Pull and tag image from local registry
+    steps:
+      - run: |
+          docker pull localhost:5000/petprep
+          docker tag localhost:5000/petprep nipreps/petprep:latest
+
 jobs:
   build_clean:
     executor: general
@@ -96,7 +98,7 @@ jobs:
     - checkout:
         path: *src
     - docker/install-docker-credential-helper
-    - run: *docker_auth
+    - docker-auth
     - run:
         name: Build Docker image
         no_output_timeout: 60m
@@ -133,8 +135,8 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
+    - docker-auth
+    - setup-docker-registry
     - run:
         name: Get base image information
         command: |
@@ -263,9 +265,9 @@ jobs:
         keys:
         - data-v0-{{ .Branch }}-{{ .Revision }}
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Run PETPrep tests
         no_output_timeout: 2h
@@ -323,9 +325,9 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Deploy to Docker Hub
         no_output_timeout: 40m
@@ -348,9 +350,9 @@ jobs:
         - /tmp/docker
         - /tmp/images
     - docker/install-docker-credential-helper
-    - run: *docker_auth
-    - run: *setup_docker_registry
-    - run: *pull_from_registry
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
     - run:
         name: Deploy to Docker Hub
         no_output_timeout: 40m
