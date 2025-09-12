@@ -316,7 +316,7 @@ jobs:
             /tmp/ds004856 /tmp/ds004856-petprep participant \
             --fs-subjects-dir /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer \
             --fs-no-resume --derivatives petprep=/tmp/ds004856/derivatives/petprep \
-            --output-spaces MNI152NLin2009cAsym
+            --output-spaces MNI152NLin2009cAsym \
             --no-msm
 
   test_pytest:
