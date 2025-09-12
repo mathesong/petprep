@@ -1,3 +1,5 @@
+import pytest
+
 from ..hmc import get_start_frame, init_pet_hmc_wf, update_list_transforms
 
 
@@ -26,11 +28,8 @@ def test_update_list_transforms_padding():
     assert update_list_transforms(xforms, 0) == xforms
 
 
-import pytest
-
-
 def test_update_list_transforms_empty():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match='cannot be empty'):
         update_list_transforms([], 1)
 
 
@@ -53,6 +52,7 @@ def test_init_pet_hmc_wf_specific_inittp():
     names = wf.list_node_names()
     assert 'find_highest_uptake_frame' not in names
     node = wf.get_node('est_robust_hmc')
-    assert node.inputs.initial_timepoint == 2
+    initial_frame = 2
+    assert node.inputs.initial_timepoint == initial_frame + 1
     assert node.inputs.fixed_timepoint is True
     assert node.inputs.no_iteration is True

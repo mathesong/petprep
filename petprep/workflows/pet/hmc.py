@@ -105,7 +105,7 @@ def _find_highest_uptake_frame(in_files: list[str]) -> int:
     import numpy as np
 
     uptake = [np.sum(nb.load(f).get_fdata(dtype=np.float32)) for f in in_files]
-    return int(np.argmax(uptake))
+    return int(np.argmax(uptake)) + 1
 
 
 class _LTAList2ITKInputSpec(BaseInterfaceInputSpec):
@@ -188,8 +188,10 @@ def init_pet_hmc_wf(
         Optional list of frame onset times used together with
         ``frame_durations`` to locate the start frame.
     initial_frame : :obj:`int`, ``'auto'`` or ``None``
-        Index of the frame used to initialize motion correction. If ``'auto'`` or
+        0-based index of the frame used to initialize motion correction. If ``'auto'`` or
         ``None`` (default), the frame with the highest uptake is selected automatically.
+        FreeSurfer's ``initial_timepoint`` is 1-based; this workflow applies the
+        required offset internally.
     fixed_frame : :obj:`bool`
         Whether to keep the initial time point fixed during robust template
         estimation (``fs.RobustTemplate``'s ``fixtp`` parameter). If ``True``,
@@ -316,7 +318,7 @@ FreeSurfer's ``mri_robust_template``.
         name='est_robust_hmc',
     )
     if not auto_init_frame:
-        robust_template.inputs.initial_timepoint = int(initial_frame)
+        robust_template.inputs.initial_timepoint = int(initial_frame) + 1
     upd_xfm = pe.Node(
         niu.Function(
             input_names=['xforms', 'idx'],
