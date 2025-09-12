@@ -317,6 +317,7 @@ jobs:
             --fs-subjects-dir /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer \
             --fs-no-resume --derivatives petprep=/tmp/ds004856/derivatives/petprep \
             --output-spaces MNI152NLin2009cAsym
+            --no-msm
 
   test_pytest:
     executor: general
