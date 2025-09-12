@@ -1,28 +1,3 @@
-_check_skip_job: &check_skip_job
-  name: Check commit message and determine if job should be skipped
-  command: |
-    set +e
-    cd /tmp/src/petprep
-    COMMIT_MSG="$(git show -s --format=%s)"
-    DOCBUILD="$(echo ${COMMIT_MSG} | grep -i -E '^docs?(\(\w+\))?:')"
-    SKIP_ALL="$(echo ${COMMIT_MSG} | grep -i -E '\[skipcircle\]')"
-    SKIP_PYTEST="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?tests\]')"
-
-    # no skipping if tagged build
-    if [[ -n "$CIRCLETAG" ]]; then
-      exit 0
-    elif [[ -n "$DOCSBUILD" ]]; then  # always try to skip docs builds
-      echo "Only docs build"
-      circleci step halt
-    elif [ -n "$SKIP_ALL" ]; then
-      echo "Skipping all!"
-      circleci step halt
-    elif [ -n "$CHECK_PYTEST" -a -n "$SKIP_PYTEST" ]; then
-      echo "Skipping pytest"
-      circleci step halt
-    fi
-    echo "No skip"
-
 _setup_petprep_docker: &setup_petprep_docker
   name: Install PETPrep's docker wrapper
   command: |
@@ -92,6 +67,36 @@ commands:
       - run: |
           docker pull localhost:5000/petprep
           docker tag localhost:5000/petprep nipreps/petprep:latest
+  check-skip:
+    parameters:
+      check:
+        default: circle
+        type: string
+    steps:
+      - run:
+          name: Check commit message and determine if job should be skipped
+          command: |
+            set +e
+            cd /tmp/src/petprep
+            COMMIT_MSG="$(git show -s --format=%s)"
+            DOCBUILD="$(echo ${COMMIT_MSG} | grep -i -E '^docs?(\(\w+\))?:')"
+            SKIP_ALL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?circle\]')"
+            SKIP_LOCAL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?<<parameters.check>>\]')"
+
+            # no skipping if tagged build
+            if [[ -n "$CIRCLETAG" ]]; then
+              exit 0
+            elif [[ -n "$DOCSBUILD" ]]; then  # always try to skip docs builds
+              echo "Only docs build"
+              circleci step halt
+            elif [ -n "$SKIP_ALL" ]; then
+              echo "Skipping all"
+              circleci step halt
+            elif [ -n "$SKIP_LOCAL" ]; then
+              echo "Skipping <<parameters.check>>"
+              circleci step halt
+            fi
+            echo "No skip"
 
 jobs:
   build_clean:
@@ -127,7 +132,7 @@ jobs:
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip
     - restore_cache:
         keys:
         - build-v2-{{ .Branch }}-{{ .Revision }}
@@ -271,12 +276,11 @@ jobs:
 
   test_pytest:
     executor: general
-    environment:
-      CHECK_PYTEST: true
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip:
+        check: tests
     - attach_workspace:
         at: /tmp
     - restore_cache:
@@ -366,7 +370,7 @@ jobs:
     steps:
     - checkout:
         path: *src
-    - run: *check_skip_job
+    - check-skip
     - restore_cache:
         keys:
         - build-v2-{{ .Branch }}-{{ .Revision }}
