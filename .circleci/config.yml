@@ -297,6 +297,14 @@ jobs:
     - pull-from-registry
     - run: *setup_petprep_docker
     - run:
+        name: Install git-annex
+        command: |
+          command -v git-annex || pip install git-annex
+    - run:
+        name: Unlock files
+        command: |
+          git -C /tmp/ds004856/ annex unlock .
+    - run:
         name: Run PETPrep with full precomputed derivatives
         no_output_timeout: 2h
         command: |
