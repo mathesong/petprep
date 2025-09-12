@@ -248,7 +248,7 @@ jobs:
             datalad update -d /tmp/ds004856 --merge
             datalad get -d /tmp/ds004856 -J4 \
               /tmp/ds004856/sub-1023 \
-              /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer/sub-1023/{mri,surf} \
+              /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer/sub-1023/{mri,surf,stats} \
               /tmp/ds004856/derivatives/petprep/sub-1023
       - save_cache:
          key: data-v1-{{ checksum "remote_stamp.txt" }}
