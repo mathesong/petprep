@@ -9,11 +9,6 @@ _machine_defaults: &machine_defaults
   working_directory: /tmp/src/petprep
   resource_class: large
 
-_python_defaults: &python_defaults
-  docker:
-  - image: cimg/python:3.12
-  working_directory: /tmp/src/petprep
-
 _docker_auth: &docker_auth
   name: Docker authentication
   command: |
@@ -372,70 +367,6 @@ jobs:
             fi
           fi
 
-  test_deploy_pypi:
-    <<: *python_defaults
-    steps:
-    - checkout
-    - run:
-        name: Update build tools
-        command: pip install --upgrade build twine hatch
-    - run:
-        name: Build PETPrep
-        command: python -m build
-    - run:
-        name: Twine check petprep
-        command: twine check dist/*
-    - run:
-        name: Pre-run hatch version
-        command: hatch version
-    - store_artifacts:
-        path: /tmp/src/petprep/dist
-    - run:
-        name: Check sdist distribution
-        command: |
-          THISVERSION=$( hatch version )
-          THISVERSION=${CIRCLE_TAG:-$THISVERSION}
-          virtualenv --python=python sdist
-          source sdist/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install dist/petprep*.tar.gz
-          which petprep | grep sdist\\/bin
-          INSTALLED_VERSION=$(petprep --version)
-          INSTALLED_VERSION=${INSTALLED_VERSION%$'\r'}
-          INSTALLED_VERSION=${INSTALLED_VERSION#*"PETPrep v"}
-          echo "VERSION: \"$THISVERSION\""
-          echo "INSTALLED: \"$INSTALLED_VERSION\""
-          test "$INSTALLED_VERSION" = "$THISVERSION"
-    - run:
-        name: Check wheel distribution
-        command: |
-          THISVERSION=$( hatch version )
-          THISVERSION=${CIRCLE_TAG:-$THISVERSION}
-          virtualenv --python=python wheel
-          source wheel/bin/activate
-          python -m pip install dist/petprep*.whl
-          which petprep | grep wheel\\/bin
-          INSTALLED_VERSION=$(petprep --version)
-          INSTALLED_VERSION=${INSTALLED_VERSION%$'\r'}
-          INSTALLED_VERSION=${INSTALLED_VERSION#*"PETPrep v"}
-          echo "VERSION: \"$THISVERSION\""
-          echo "INSTALLED: \"$INSTALLED_VERSION\""
-          test "$INSTALLED_VERSION" = "$THISVERSION"
-
-  deploy_pypi:
-    <<: *python_defaults
-    steps:
-    - checkout
-    - run:
-        name: Update build tools
-        command: pip install --upgrade build twine
-    - run:
-        name: Build PETPrep
-        command: python -m build
-    - run:
-        name: Upload packages to PyPI
-        command: python -m twine upload dist/petprep*
-
   deployable:
     docker:
     - image: busybox:latest
@@ -480,17 +411,6 @@ workflows:
           tags:
             only: /.*/
 
-    - test_deploy_pypi:
-        context:
-        - nipreps-common
-        filters:
-          branches:
-            only:
-            - /rel\/.*/
-            - /maint\/.*/
-          tags:
-            only: /.*/
-
     - test_pytest:
         context:
         - nipreps-common
@@ -515,7 +435,6 @@ workflows:
 
     - deployable:
         requires:
-        - test_deploy_pypi
         - test_pytest
         filters:
           branches:
@@ -531,16 +450,5 @@ workflows:
         filters:
           branches:
             only: master
-          tags:
-            only: /.*/
-
-    - deploy_pypi:
-        context:
-        - nipreps-common
-        requires:
-        - deployable
-        filters:
-          branches:
-            ignore: /.*/
           tags:
             only: /.*/
