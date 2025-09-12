@@ -56,6 +56,10 @@ executors:
     environment:
       TZ: "/usr/share/zoneinfo/America/Los_Angeles"
       SCRATCH: "/scratch"
+  python:
+    docker:
+      - image: cimg/python:3.12
+    working_directory: /tmp/src/petprep
 aliases:
 - &src "/tmp/src/petprep"
 orbs:
@@ -217,33 +221,53 @@ jobs:
         - /tmp/images
 
   get_data:
-    executor: general
+    executor: python
     steps:
-    - restore_cache:
-        keys:
-        - data-v0-{{ .Branch }}-{{ .Revision }}
-        - data-v0--{{ .Revision }}
-        - data-v0-{{ .Branch }}-
-        - data-v0-master-
-        - data-v0-
-    - run:
-        name: Store FreeSurfer license file
-        command: |
-          mkdir -p /tmp/fslicense
-          cd /tmp/fslicense
-          echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IGxpY2Vuc2UudHh0Cg==" | base64 -d | sh
-    - run:
-        name: Create Nipype config files
-        command: |
-          mkdir -p /tmp/ds005
-          printf "[execution]\nstop_on_first_crash = true\n" > /tmp/ds005/nipype.cfg
-          echo "poll_sleep_duration = 0.01" >> /tmp/ds005/nipype.cfg
-          echo "hash_method = content" >> /tmp/ds005/nipype.cfg
-    - persist_to_workspace:
-        root: /tmp
-        paths:
-        - fslicense
-        - ds005/nipype.cfg
+      - run: |
+          uv self update
+          uv tool install git-annex
+          uv tool install --with-executables-from=datalad-osf,datalad-next datalad
+      - run: |
+          git ls-remote --exit-code https://gin.g-node.org/nipreps-data/ds004856.git HEAD > remote_stamp.txt
+      - run: |
+          git config --global user.name "CircleCI User"
+          git config --global user.email "email@domain.tld"
+      - restore_cache:
+          keys:
+          - data-v1-{{ checksum "remote_stamp.txt" }}
+          - data-v1-
+          - data-v0-
+      - run:
+          name: Sync nipreps-data/ds004856.git
+          command: |
+            datalad install -r -s https://gin.g-node.org/nipreps-data/ds004856 /tmp/ds004856
+            datalad update -d /tmp/ds004856 --merge
+            datalad get -d /tmp/ds004856 -J4 \
+              /tmp/ds004856/sub-1023 \
+              /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer/sub-1023/{mri,surf} \
+              /tmp/ds004856/derivatives/petprep/sub-1023
+      - save_cache:
+         key: data-v1-{{ checksum "remote_stamp.txt" }}
+         paths:
+            - /tmp/ds004856
+      - run:
+          name: Store FreeSurfer license file
+          command: |
+            mkdir -p /tmp/fslicense
+            cd /tmp/fslicense
+            echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IGxpY2Vuc2UudHh0Cg==" | base64 -d | sh
+      - run:
+          name: Create Nipype config files
+          command: |
+            mkdir -p /tmp/ds005
+            printf "[execution]\nstop_on_first_crash = true\n" > /tmp/ds005/nipype.cfg
+            echo "poll_sleep_duration = 0.01" >> /tmp/ds005/nipype.cfg
+            echo "hash_method = content" >> /tmp/ds005/nipype.cfg
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+          - fslicense
+          - ds005/nipype.cfg
 
   test_pytest:
     executor: general
