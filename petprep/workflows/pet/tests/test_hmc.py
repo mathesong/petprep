@@ -77,7 +77,7 @@ def test_find_highest_uptake_frame(tmp_path):
     files = []
     for idx, arr in enumerate(data):
         img = nb.Nifti1Image(arr, np.eye(4))
-        fname = tmp_path / f"frame{idx}.nii.gz"
+        fname = tmp_path / f'frame{idx}.nii.gz'
         img.to_filename(fname)
         files.append(str(fname))
 
