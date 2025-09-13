@@ -6,7 +6,6 @@ from ..hmc import (
     _find_highest_uptake_frame,
     get_start_frame,
     init_pet_hmc_wf,
-    lta_list,
     update_list_transforms,
 )
 
@@ -64,12 +63,6 @@ def test_init_pet_hmc_wf_specific_inittp():
     assert node.inputs.initial_timepoint == initial_frame + 1
     assert node.inputs.fixed_timepoint is True
     assert node.inputs.no_iteration is True
-
-
-def test_lta_list_conversion():
-    in_files = ['frame1.nii.gz', 'frame2.nii.gz']
-    expected = ['frame1.lta', 'frame2.lta']
-    assert lta_list(in_files) == expected
 
 
 def test_find_highest_uptake_frame(tmp_path):
