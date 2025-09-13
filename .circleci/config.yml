@@ -520,6 +520,7 @@ workflows:
     - deployable:
         requires:
         - test_pytest
+        - test_ds004856
         filters:
           branches:
             only: master
