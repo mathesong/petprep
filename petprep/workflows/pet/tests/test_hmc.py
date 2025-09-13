@@ -1,6 +1,14 @@
+import nibabel as nb
+import numpy as np
 import pytest
 
-from ..hmc import get_start_frame, init_pet_hmc_wf, lta_list, update_list_transforms
+from ..hmc import (
+    _find_highest_uptake_frame,
+    get_start_frame,
+    init_pet_hmc_wf,
+    lta_list,
+    update_list_transforms,
+)
 
 
 def test_get_start_frame_basic():
@@ -62,3 +70,17 @@ def test_lta_list_conversion():
     in_files = ['frame1.nii.gz', 'frame2.nii.gz']
     expected = ['frame1.lta', 'frame2.lta']
     assert lta_list(in_files) == expected
+
+
+def test_find_highest_uptake_frame(tmp_path):
+    data = [np.ones((2, 2, 2)) * i for i in (1, 2, 3)]
+    files = []
+    for idx, arr in enumerate(data):
+        img = nb.Nifti1Image(arr, np.eye(4))
+        fname = tmp_path / f"frame{idx}.nii.gz"
+        img.to_filename(fname)
+        files.append(str(fname))
+
+    expected = np.argmax([arr.sum() for arr in data]) + 1
+    result = _find_highest_uptake_frame(files)
+    assert result == expected
