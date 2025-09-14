@@ -520,10 +520,9 @@ workflows:
     - deployable:
         requires:
         - test_pytest
-        - test_ds004856
         filters:
           branches:
-            only: main
+            only: master
           tags:
             only: /.*/
 
@@ -534,6 +533,6 @@ workflows:
         - deployable
         filters:
           branches:
-            only: main
+            only: master
           tags:
             only: /.*/
