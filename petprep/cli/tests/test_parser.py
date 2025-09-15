@@ -322,8 +322,6 @@ def test_hmc_init_frame_parsing(tmp_path):
     opts = parser.parse_args(base_args + ['--hmc-init-frame'])
     assert opts.hmc_init_frame == 'auto'
 
-    opts = parser.parse_args(
-        base_args + ['--hmc-init-frame', '3', '--hmc-init-frame-fix']
-    )
+    opts = parser.parse_args(base_args + ['--hmc-init-frame', '3', '--hmc-init-frame-fix'])
     assert opts.hmc_init_frame == 3
     assert opts.hmc_fix_frame is True
