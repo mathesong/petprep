@@ -553,10 +553,13 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         ),
     )
     g_hmc.add_argument(
-        '--hmc-fix-frame',
+        '--hmc-init-frame-fix',
         dest='hmc_fix_frame',
         action='store_true',
-        help=('Keep the chosen reference frame fixed during head-motion estimation.'),
+        help=(
+            'Keep the chosen initial reference frame fixed during head-motion '
+            'estimation.'
+        ),
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
