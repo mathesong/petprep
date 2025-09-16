@@ -9,15 +9,33 @@
       "type": "Researcher"
     },
     {
+      "orcid": "0000-0001-8435-6191",
+      "affiliation": "School of Engineering, HES-SO University of Applied Sciences and Arts Western Switzerland, Sion, Switzerland",
+      "name": "Oscar Esteban",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-7252-7771",
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Mathias Goncalves",
+      "type": "Researcher"
+    },
+    {
       "orcid": "0000-0002-9661-1396",
       "affiliation": "Brigham and Women's Hospital, Mass General Brigham, Harvard Medical School, MA, USA",
       "name": "Jon Haitz Legarreta Gorro\u00f1o",
       "type": "Researcher"
     },
     {
-      "orcid": "0000-0001-8435-6191",
-      "affiliation": "School of Engineering, HES-SO University of Applied Sciences and Arts Western Switzerland, Sion, Switzerland",
-      "name": "Oscar Esteban",
+      "orcid": "0000-0001-6550-4574",
+      "affiliation": "Data Science and Sharing Team, National Institute of Mental Health, Bethesda, MD, USA",
+      "name": "Anthony Galassi",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-5042-7422",
+      "affiliation": "National Institute on Aging",
+      "name": "Murat Bilgel",
       "type": "Researcher"
     },
     {
@@ -27,9 +45,27 @@
       "type": "Researcher"
     },
     {
-      "orcid": "0000-0002-7252-7771",
-      "affiliation": "Department of Psychology, Stanford University, CA, USA",
-      "name": "Mathias Goncalves",
+      "orcid": "0000-0002-3987-6603",
+      "affiliation": "National Institute on Aging",
+      "name": "Bae Jonghyun",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-5920-5102",
+      "affiliation": "Karolinska Institutet, and Neurobiology Research Unit",
+      "name": "Ruben D\u00f6rfel",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-5643-1243",
+      "affiliation": "Montreal Neurological Institute",
+      "name": "Eric Ceballos",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-7213-9253",
+      "affiliation": "Institute of Mental Health Research",
+      "name": "Rami Hamati",
       "type": "Researcher"
     },
     {
