@@ -104,9 +104,10 @@ def test_config_spaces():
 
 
 @pytest.mark.parametrize(
-    ('master_seed', 'ants_seed', 'numpy_seed'), [(1, 17612, 8272), (100, 19094, 60232)]
+    ('master_seed', 'ants_seed', 'numpy_seed', 'freesurfer_seed'),
+    [(1, 17612, 8272, 33433), (100, 19094, 60232, 59629)],
 )
-def test_prng_seed(master_seed, ants_seed, numpy_seed):
+def test_prng_seed(master_seed, ants_seed, numpy_seed, freesurfer_seed):
     """Ensure seeds are properly tracked"""
     seeds = config.seeds
     with patch.dict(os.environ, {}):
@@ -114,8 +115,10 @@ def test_prng_seed(master_seed, ants_seed, numpy_seed):
         assert seeds.master == master_seed
         assert seeds.ants == ants_seed
         assert seeds.numpy == numpy_seed
+        assert seeds.freesurfer == freesurfer_seed
         assert os.getenv('ANTS_RANDOM_SEED') == str(ants_seed)
+        assert os.getenv('FREESURFER_RANDOM_SEED') == str(freesurfer_seed)
 
     _reset_config()
-    for seed in ('_random_seed', 'master', 'ants', 'numpy'):
+    for seed in ('_random_seed', 'master', 'ants', 'numpy', 'freesurfer'):
         assert getattr(config.seeds, seed) is None
