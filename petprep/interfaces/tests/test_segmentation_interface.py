@@ -75,4 +75,3 @@ def test_set_freesurfer_seed_runtime():
     runtime = _set_freesurfer_seed(runtime)
 
     assert runtime.environ['FREESURFER_RANDOM_SEED'] == str(config.seeds.freesurfer)
-
