@@ -92,6 +92,10 @@ def _build_parser(**kwargs):
             raise parser.error("Argument can't be less than one.")
         return value
 
+    def _int_or_auto(value):
+        """Parse an integer value or the special 'auto' keyword."""
+        return 'auto' if value == 'auto' else int(value)
+
     def _to_gb(value):
         scale = {'G': 1, 'T': 10**3, 'M': 1e-3, 'K': 1e-6, 'B': 1e-9}
         digits = ''.join([c for c in value if c.isdigit()])
@@ -535,6 +539,24 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         default=120,
         type=float,
         help='Time (in seconds) after which head-motion estimation is performed.',
+    )
+    g_hmc.add_argument(
+        '--hmc-init-frame',
+        dest='hmc_init_frame',
+        nargs='?',
+        const='auto',
+        default='auto',
+        type=_int_or_auto,
+        help=(
+            "Initial frame index for head-motion estimation; omit or use 'auto' "
+            'to select the frame with highest uptake.'
+        ),
+    )
+    g_hmc.add_argument(
+        '--hmc-init-frame-fix',
+        dest='hmc_fix_frame',
+        action='store_true',
+        help=('Keep the chosen initial reference frame fixed during head-motion estimation.'),
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
