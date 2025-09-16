@@ -1,4 +1,4 @@
-0.0.1 (2025-09-16)
-------------------
+0.0.0 (Unreleased)
+-------------------
 * Initial release of PETPrep.
 * Provides preprocessing workflows for PET imaging data.
