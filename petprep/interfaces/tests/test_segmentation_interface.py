@@ -16,10 +16,7 @@ def test_segmentgtm_skip(tmp_path):
 
     assert res.runtime.returncode == 0
     assert Path(res.outputs.out_file) == subj_dir / 'mri' / 'gtmseg.mgz'
-    assert (
-        res.runtime.environ['FREESURFER_RANDOM_SEED']
-        == str(config.seeds.freesurfer)
-    )
+    assert res.runtime.environ['FREESURFER_RANDOM_SEED'] == str(config.seeds.freesurfer)
 
 
 def _fake_bs_run(self, cmd):
