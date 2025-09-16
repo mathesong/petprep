@@ -1,7 +1,8 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from ... import config
-from ..segmentation import MRISclimbicSeg, SegmentBS, SegmentGTM, SegmentWM
+from ..segmentation import MRISclimbicSeg, SegmentBS, SegmentGTM, SegmentWM, _set_freesurfer_seed
 
 
 def test_segmentgtm_skip(tmp_path):
@@ -66,3 +67,12 @@ def test_segmentwm_stdout_stderr(monkeypatch, tmp_path):
     res = seg.run()
     assert res.outputs.stdout == 'wm out'
     assert res.outputs.stderr == 'wm err'
+
+
+def test_set_freesurfer_seed_runtime():
+    runtime = SimpleNamespace(environ={})
+
+    runtime = _set_freesurfer_seed(runtime)
+
+    assert runtime.environ['FREESURFER_RANDOM_SEED'] == str(config.seeds.freesurfer)
+
