@@ -26,6 +26,7 @@ from nipype.interfaces.base import (
 from nipype.interfaces.freesurfer.base import FSCommand, FSTraitedSpec
 from nipype.interfaces.freesurfer.petsurfer import GTMSeg
 from nipype.utils.filemanip import fname_presuffix
+
 from .. import config
 
 
