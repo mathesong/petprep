@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ... import config
-from ..segmentation import SegmentBS, SegmentGTM, SegmentWM
+from ..segmentation import MRISclimbicSeg, SegmentBS, SegmentGTM, SegmentWM
 
 
 def test_segmentgtm_skip(tmp_path):
@@ -16,6 +16,23 @@ def test_segmentgtm_skip(tmp_path):
 
     assert res.runtime.returncode == 0
     assert Path(res.outputs.out_file) == subj_dir / 'mri' / 'gtmseg.mgz'
+    assert res.runtime.environ['FREESURFER_RANDOM_SEED'] == str(config.seeds.freesurfer)
+
+
+def test_mrisclimbicseg_seed(tmp_path):
+    subjects_dir = tmp_path / 'subjects'
+    subject_dir = subjects_dir / 'sub-01'
+    subject_dir.mkdir(parents=True)
+
+    out_file = subject_dir / 'sub-01_sclimbic.nii.gz'
+    out_stats = subject_dir / 'sub-01_sclimbic.stats'
+    out_file.write_text('')
+    out_stats.write_text('')
+
+    seg = MRISclimbicSeg(out_file=str(out_file), sd=str(subjects_dir), subjects=['sub-01'])
+    res = seg.run()
+
+    assert res.runtime.returncode == 0
     assert res.runtime.environ['FREESURFER_RANDOM_SEED'] == str(config.seeds.freesurfer)
 
 
