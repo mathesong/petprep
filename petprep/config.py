@@ -667,6 +667,8 @@ class seeds(_Config):
     """Seed used for antsRegistration, antsAI, antsMotionCorr"""
     numpy = None
     """Seed used by NumPy"""
+    freesurfer = None
+    """Seed used by FreeSurfer utilities"""
 
     @classmethod
     def init(cls):
@@ -678,6 +680,7 @@ class seeds(_Config):
         # functions to set program specific seeds
         cls.ants = _set_ants_seed()
         cls.numpy = _set_numpy_seed()
+        cls.freesurfer = _set_freesurfer_seed()
 
 
 def _set_ants_seed():
@@ -693,6 +696,13 @@ def _set_numpy_seed():
 
     val = random.randint(1, 65536)
     np.random.seed(val)
+    return val
+
+
+def _set_freesurfer_seed():
+    """Fix random seed for FreeSurfer utilities"""
+    val = random.randint(1, 65536)
+    os.environ['FREESURFER_RANDOM_SEED'] = str(val)
     return val
 
 
