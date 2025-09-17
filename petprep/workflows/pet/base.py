@@ -754,9 +754,7 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
     if nvols > 2:  # run these only if PET has at least 3 frames
         pet_confounds_wf = init_pet_confs_wf(
             mem_gb=mem_gb['largemem'],
-            metadata=all_metadata[0],
             freesurfer=config.workflow.run_reconall,
-            regressors_all_comps=config.workflow.regressors_all_comps,
             regressors_fd_th=config.workflow.regressors_fd_th,
             regressors_dvars_th=config.workflow.regressors_dvars_th,
             name='pet_confounds_wf',

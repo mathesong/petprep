@@ -47,8 +47,6 @@ from .outputs import prepare_timing_parameters
 
 def init_pet_confs_wf(
     mem_gb: float,
-    metadata: dict,
-    regressors_all_comps: bool,
     regressors_dvars_th: float,
     regressors_fd_th: float,
     freesurfer: bool = False,
@@ -87,8 +85,6 @@ def init_pet_confs_wf(
             from petprep.workflows.pet.confounds import init_pet_confs_wf
             wf = init_pet_confs_wf(
                 mem_gb=1,
-                metadata={},
-                regressors_all_comps=False,
                 regressors_dvars_th=1.5,
                 regressors_fd_th=0.5,
             )
@@ -99,14 +95,8 @@ def init_pet_confs_wf(
         Size of PET file in GB - please note that this size
         should be calculated after resamplings that may extend
         the FoV
-    metadata : :obj:`dict`
-        BIDS metadata for PET file
     name : :obj:`str`
         Name of workflow (default: ``pet_confs_wf``)
-    regressors_all_comps : :obj:`bool`
-        Indicates whether CompCor decompositions should return all
-        components instead of the minimal number of components necessary
-        to explain 50 percent of the variance in the decomposition mask.
     regressors_dvars_th : :obj:`float`
         Criterion for flagging DVARS outliers
     regressors_fd_th : :obj:`float`
