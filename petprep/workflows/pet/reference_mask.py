@@ -50,7 +50,9 @@ def init_pet_refmask_wf(
         IdentityInterface(fields=['seg_file', 'gm_probseg']),
         name='inputnode',
     )
-    outputnode = pe.Node(IdentityInterface(fields=['refmask_file', 'morph_tsv']), name='outputnode')
+    outputnode = pe.Node(
+        IdentityInterface(fields=['refmask_file', 'morph_tsv']), name='outputnode'
+    )
 
     extract_mask = pe.Node(ExtractRefRegion(), name='extract_refregion')
     extract_mask.inputs.segmentation_type = segmentation
