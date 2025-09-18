@@ -237,6 +237,18 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
         'pet_file',
         'inputnode.source_files',
     ) in petref_edge['connect']
+    seg_edge = wf._graph.get_edge_data(wf.get_node('inputnode'), ds_refmask)
+    assert (
+        'segmentation',
+        'inputnode.segmentation',
+    ) in seg_edge['connect']
+
+    merge_node = ds_refmask.get_node('merge_source_files')
+    merge_edge = ds_refmask._graph.get_edge_data(ds_refmask.get_node('inputnode'), merge_node)
+    assert (
+        'segmentation',
+        'in2',
+    ) in merge_edge['connect']
 
     gm_node = wf.get_node('select_gm_probseg')
     edge_prob = wf._graph.get_edge_data(gm_node, wf.get_node('pet_refmask_wf'))

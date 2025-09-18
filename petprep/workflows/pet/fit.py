@@ -489,6 +489,13 @@ def init_pet_fit_wf(
                     ],
                 ),
                 (
+                    inputnode,
+                    ds_refmask_wf,
+                    [
+                        ('segmentation', 'inputnode.segmentation'),
+                    ],
+                ),
+                (
                     petref_buffer,
                     ds_refmask_wf,
                     [
