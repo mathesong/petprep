@@ -19,9 +19,9 @@ LOCAL_FREESURFER_DIR="$STUDY/data/derivatives/freesurfer-6.0.1"
 
 # Prepare some writeable bind-mount points.
 TEMPLATEFLOW_HOST_HOME=$HOME/.cache/templateflow
-FMRIPREP_HOST_CACHE=$HOME/.cache/petprep
+PETPREP_HOST_CACHE=$HOME/.cache/petprep
 mkdir -p ${TEMPLATEFLOW_HOST_HOME}
-mkdir -p ${FMRIPREP_HOST_CACHE}
+mkdir -p ${PETPREP_HOST_CACHE}
 
 # Prepare derivatives folder
 mkdir -p ${BIDS_DIR}/${DERIVS_DIR}

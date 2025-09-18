@@ -62,7 +62,7 @@ def test_check_latest1(tmpdir, monkeypatch):
     monkeypatch.setattr(requests, 'get', mock_get)
 
     # Initially, cache should not exist
-    cachefile = Path.home() / '.cache' / 'fmriprep' / 'latest'
+    cachefile = Path.home() / '.cache' / 'petprep' / 'latest'
     assert not cachefile.exists()
 
     # First check actually fetches from pypi
@@ -156,7 +156,7 @@ def test_check_latest3(tmpdir, monkeypatch, bad_cache):
     monkeypatch.setattr(requests, 'get', mock_get)
 
     # Initially, cache should not exist
-    cachefile = Path.home() / '.cache' / 'fmriprep' / 'latest'
+    cachefile = Path.home() / '.cache' / 'petprep' / 'latest'
     cachefile.parent.mkdir(parents=True, exist_ok=True)
     assert not cachefile.exists()
 
@@ -200,7 +200,7 @@ def test_is_flagged(monkeypatch, result, version, code, json):
 
 
 def test_readonly(tmp_path, monkeypatch):
-    """Test behavior when $HOME/.cache/fmriprep/latest can't be written out."""
+    """Test behavior when $HOME/.cache/petprep/latest can't be written out."""
     home_path = Path('/home/readonly') if getenv('TEST_READONLY_FILESYSTEM') else tmp_path
     monkeypatch.setenv('HOME', str(home_path))
     cachedir = home_path / '.cache'
@@ -212,7 +212,7 @@ def test_readonly(tmp_path, monkeypatch):
 
     # Make sure creating the folder will raise the exception.
     with pytest.raises(OSError, match=r'Read-only file system|Permission denied'):
-        (cachedir / 'fmriprep').mkdir(parents=True)
+        (cachedir / 'petprep').mkdir(parents=True)
 
     # Should not raise
     check_latest()

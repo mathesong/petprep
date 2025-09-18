@@ -7,7 +7,7 @@ Outputs of *PETPrep*
 ---------------------
 *PETPrep* outputs conform to the :abbr:`BIDS (brain imaging data structure)`
 Derivatives specification (see `BIDS Derivatives`_, along with the
-upcoming `BEP 011`_ and `BEP 012`_).
+upcoming `BEP 011`_ and `BEP 023`_).
 *PETPrep* generates three broad classes of outcomes:
 
 1. **Visual QA (quality assessment) reports**:
@@ -20,9 +20,9 @@ upcoming `BEP 011`_ and `BEP 012`_).
    have been applied.
    For example, :abbr:`INU (intensity non-uniformity)`-corrected versions
    of the T1-weighted image (per subject), the brain mask,
-   or :abbr:`BOLD (blood-oxygen level dependent)`
-   images after head-motion correction, slice-timing correction and aligned into
-   the same-subject's T1w space or in some standard space.
+   or dynamic PET series after motion correction (and optional partial volume
+   correction) aligned into the same-subject's T1w space or in some
+   standard space.
 
 3. **Confounds**: this is a special family of derivatives that can be utilized
    to inform subsequent denoising steps.
@@ -57,14 +57,14 @@ The log directory contains `citation boilerplate`_ text.
 ``dataset_description.json`` is a metadata file in which PETPrep
 records metadata recommended by the BIDS standard.
 
-This layout, now the default, may be explicitly specified with the
+This default layout, may be explicitly specified with the
 ``--output-layout bids`` command-line option.
-For compatibility with versions of PETPrep prior to 21.0, the
+For compatibility with versions of fMRIPrep prior to 21.0, the
 `legacy layout`_ is available via ``--output-layout legacy``.
 
 Processing level
 ----------------
-As of version 23.2.0, PETPrep supports three levels of derivatives:
+As of version 0.0.1, PETPrep supports three levels of derivatives:
 
 * ``--level minimal``: This processing mode aims to produce the smallest
   working directory and output dataset possible, while enabling all further
@@ -73,13 +73,9 @@ As of version 23.2.0, PETPrep supports three levels of derivatives:
   preprocessing can be assessed. Because no resampling is done, confounds
   and carpetplots will be missing from the reports.
 * ``--level resampling``: This processing mode aims to produce additional
-  derivatives that enable third-party resampling, resampling PET series
+  derivatives that enable third-party resampling, resampling PET data
   in the working directory as needed, but these are not saved to the output
   directory.
-  The ``--me-output-echos`` flag will be enabled at this level, in which
-  case the individual echos will be saved to the working directory after
-  slice-timing correction, head-motion correction, and susceptibility
-  distortion correction.
 * ``--level full``: This processing mode aims to produce all derivatives
   that have previously been a part of the PETPrep output dataset.
   This is the default processing level.
@@ -88,7 +84,7 @@ Visual Reports
 --------------
 *PETPrep* outputs summary reports, written to ``<output dir>/petprep/sub-<subject_label>.html``.
 These reports provide a quick way to make visual inspection of the results easy.
-`View a sample report. <_static/SampleReport/sample_report.html>`_
+`View a sample report. <_static/sample_report/sample_report.html>`_
 
 Derivatives of *PETPrep* (preprocessed data)
 ---------------------------------------------
@@ -197,7 +193,7 @@ and lookup tables are provided. ::
       desc-aparcaseg_dseg.tsv
 
 Copies of the ``fsaverage`` subjects distributed with the running version of
-FreeSurfer are copied into this subjects directory, if any functional data are
+FreeSurfer are copied into this subjects directory, if any PET data are
 sampled to those subject spaces.
 
 Note that the use of ``sourcedata/`` recognizes FreeSurfer derivatives as an input to
@@ -206,16 +202,14 @@ This is strictly true when pre-computed FreeSurfer derivatives are provided eith
 the ``sourcedata/`` directory or passed via the ``--fs-subjects-dir`` flag;
 if PETPrep runs FreeSurfer, then there is a mutual dependency.
 
-Functional derivatives
+PET derivatives
 ~~~~~~~~~~~~~~~~~~~~~~
-Functional derivatives are stored in the ``func/`` subfolder.
-All derivatives contain ``task-<task_label>`` (mandatory) and ``run-<run_index>`` (optional), and
-these will be indicated with ``[specifiers]``::
+PET derivatives are stored in the ``pet/`` subfolder.
 
   sub-<subject_label>/
     func/
-      sub-<subject_label>_[specifiers]_space-<space_label>_desc-brain_mask.nii.gz
-      sub-<subject_label>_[specifiers]_space-<space_label>_desc-preproc_pet.nii.gz
+      sub-<subject_label>_space-<space_label>_desc-brain_mask.nii.gz
+      sub-<subject_label>_space-<space_label>_desc-preproc_pet.nii.gz
 
 .. note::
 
@@ -251,27 +245,6 @@ image and affine transform::
 
    Coregistration outputs are part of the *minimal* processing level.
 
-**Fieldmap registration**.
-
-If a fieldmap is used for the correction of a PET series, then a registration
-is calculated between the PET series and the fieldmap. If, for example, the fieldmap
-is identified with ``"B0Identifier": "TOPUP"``, the generated transform will be named::
-
-  sub-<subject_label>/
-    func/
-      sub-<subject_label>_[specifiers]_from-petref_to-TOPUP_mode-image_xfm.txt
-
-If the association is discovered through the ``IntendedFor`` field of the
-fieldmap metadata, then the transform will be given an auto-generated name::
-
-  sub-<subject_label>/
-    func/
-      sub-<subject_label>_[specifiers]_from-petref_to-auto000XX_mode-image_xfm.txt
-
-.. note::
-
-   Fieldmap registration outputs are part of the *minimal* processing level.
-
 **Regularly gridded outputs (images)**.
 Volumetric output spaces labels (``<space_label>`` above, and in the following) include
 ``T1w`` and ``MNI152NLin2009cAsym`` (default).
@@ -285,7 +258,7 @@ mid-thickness surface mesh::
     func/
       sub-<subject_label>_[specifiers]_space-T1w_desc-aparcaseg_dseg.nii.gz
       sub-<subject_label>_[specifiers]_space-T1w_desc-aseg_dseg.nii.gz
-      sub-<subject_label>_[specifiers]_hemi-[LR]_space-<space_label>_bold.func.gii
+      sub-<subject_label>_[specifiers]_hemi-[LR]_space-<space_label>_pet.func.gii
 
 Surface output spaces include ``fsnative`` (full density subject-specific mesh),
 ``fsaverage`` and the down-sampled meshes ``fsaverage6`` (41k vertices) and
@@ -336,7 +309,7 @@ from an anatomical segmentation. The resulting table has ``FrameTimesStart`` and
 
   sub-<subject_label>/
     pet/
-      sub-<subject_label>_[specifiers]_seg-<seg>_desc-preproc_timeseries.tsv
+      sub-<subject_label>_[specifiers]_seg-<seg>_desc-preproc_tacs.tsv
 
 The ``desc-preproc`` entity indicates that the curves were derived from the
 preprocessed PET series.
@@ -350,7 +323,7 @@ table containing the mean uptake within that region::
 
   sub-<subject_label>/
     pet/
-      sub-<subject_label>_[specifiers]_seg-<seg>_ref-<ref>_desc-preproc_timeseries.tsv
+      sub-<subject_label>_[specifiers]_seg-<seg>_ref-<ref>_desc-preproc_tacs.tsv
 
 The ``ref`` entity captures the reference region identifier provided via the
 :ref:`CLI options <cli_refmask>` ``--ref-mask-name`` and ``--ref-mask-index``.
@@ -361,21 +334,16 @@ also included.
 
 Confounds
 ---------
-The :abbr:`BOLD (blood-oxygen level dependent)` signal measured with fMRI is a mixture of fluctuations
-of both neuronal and non-neuronal origin.
-Neuronal signals are measured indirectly as changes in the local concentration of oxygenated hemoglobin.
-Non-neuronal fluctuations in fMRI data may appear as a result of head motion, scanner noise,
-or physiological fluctuations (related to cardiac or respiratory effects).
-For a detailed review of the possible sources of noise in the BOLD signal, refer to [Greve2013]_.
+The PET signal is a mixture of fluctuations of both neuronal and non-neuronal origin.
+Non-neuronal fluctuations in PET data may appear as a result of head motion or scanner noise.
 
 *Confounds* (or nuisance regressors) are variables representing fluctuations with a potential
 non-neuronal origin.
-Such non-neuronal fluctuations may drive spurious results in fMRI data analysis,
-including standard activation :abbr:`GLM (General Linear Model)` and functional connectivity analyses.
+Such non-neuronal fluctuations may drive spurious results in PET data analysis.
 It is possible to minimize confounding effects of non-neuronal signals by including
 them as nuisance regressors in the GLM design matrix or regressing them out from
-the fMRI data - a procedure known as *denoising*.
-There is currently no consensus on an optimal denoising strategy in the fMRI community.
+the PET data - a procedure known as *denoising*.
+There is currently no consensus on an optimal denoising strategy in the PET community.
 Rather, different strategies have been proposed, which achieve different compromises between
 how much of the non-neuronal fluctuations are effectively removed, and how much of neuronal fluctuations
 are damaged in the process.
@@ -383,8 +351,8 @@ The *PETPrep* pipeline generates a large array of possible confounds.
 
 The most well established confounding variables in neuroimaging are the six head-motion parameters
 (three rotations and three translations) - the common output of the head-motion correction
-(also known as *realignment*) of popular fMRI preprocessing software
-such as SPM_ or FSL_.
+(also known as *realignment*) of popular PET preprocessing software
+such as SPM_ or FreeSurfer_.
 Beyond the standard head-motion parameters, the PETPrep pipeline generates a large array
 of possible confounds, which enable researchers to choose the most suitable denoising
 strategy for their downstream analyses.
@@ -397,7 +365,7 @@ Such tabular files may include over 100 columns of potential confound regressors
    Do not include all columns of ``~_desc-confounds_timeseries.tsv`` table
    into your design matrix or denoising procedure.
    Filter the table first, to include only the confounds (or components thereof)
-   you want to remove from your fMRI signal.
+   you want to remove from your PET signal.
    The choice of confounding variables may depend on the analysis you want to perform,
    and may be not straightforward as no gold standard procedure exists.
    For a detailed description of various denoising strategies and their performance,
@@ -448,9 +416,6 @@ frames with sudden and large motion or intensity spikes.
 - ``dvars`` - the derivative of RMS variance over voxels (or :abbr:`DVARS (derivative of
   RMS variance over voxels)`) [Power2012]_;
 - ``std_dvars`` - standardized :abbr:`DVARS (derivative of RMS variance over voxels)`;
-- ``non_steady_state_outlier_XX`` - columns indicate non-steady state volumes with a single
-  ``1`` value and ``0`` elsewhere (*i.e.*, there is one ``non_steady_state_outlier_XX`` column per
-  outlier/volume).
 
 Detected outliers can be further removed from time series using methods such as:
 volume *censoring* - entirely discarding problematic time points [Power2012]_,
@@ -658,14 +623,14 @@ See implementation on :mod:`~petprep.workflows.pet.confounds.init_pet_confs_wf`.
 Legacy layout
 -------------
 
-Prior to PETPrep 21.0, the following organizational structure was used::
+Prior to tools such as fMRIPrep 21.0, the following organizational structure was used::
 
     <output_dir>/
-      petprep/
+      fmriprep/
       freesurfer/
 
 Although this has the advantage of keeping all outputs together,
-it ensured that the output of PETPrep could not itself be a BIDS derivative dataset,
+it ensured that the output of fMRIPrep could not itself be a BIDS derivative dataset,
 only contain one.
 
 To restore this behavior, use the ``--output-layout legacy`` command-line option.

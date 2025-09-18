@@ -34,7 +34,7 @@ Standard spaces
 When using *PETPrep* in a workflow that will investigate effects that span across
 analytical groupings, neuroimagers typically resample their data on to a standard,
 stereotactic coordinate system.
-The most extended standard space for fMRI analyses is generally referred to MNI.
+The most widely used standard space for PET analyses is generally referred to as MNI.
 For instance, to instruct *PETPrep* to use the MNI template brain distributed with
 FSL as coordinate reference the option will read as follows: ``--output-spaces MNI152NLin6Asym``.
 By default, *PETPrep* uses ``MNI152NLin2009cAsym`` as spatial-standardization reference.

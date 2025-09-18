@@ -16,7 +16,7 @@ os.environ['NO_ET'] = '1'
 
 
 def copytree_or_skip(source, target):
-    data_dir = ir_files('fmriprep') / source
+    data_dir = ir_files('petprep') / source
     if not data_dir.exists():
         pytest.skip(f'Cannot chdir into {data_dir!r}. Probably in a zipped distribution.')
 

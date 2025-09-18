@@ -78,7 +78,14 @@ def estimate_pet_mem_usage(pet_fname: str) -> tuple[int, dict]:
     nvox = int(np.prod(img.shape, dtype='u8'))
     # Assume tools will coerce to 8-byte floats to be safe
     pet_size_gb = 8 * nvox / (1024**3)
-    pet_tlen = img.shape[-1]
+
+    if img.ndim == 4:
+        pet_tlen = img.shape[3]
+    elif img.ndim == 3:
+        pet_tlen = 1
+    else:
+        raise ValueError('PET image must be 3D or 4D')
+
     mem_gb = {
         'filesize': pet_size_gb,
         'resampled': pet_size_gb * 4,

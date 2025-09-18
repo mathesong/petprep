@@ -103,6 +103,7 @@ def write_bidsignore(deriv_dir):
         '*_pet.pet.gii',
         '*_mixing.tsv',
         '*_timeseries.tsv',
+        '*_tacs.tsv',
     )
     ignore_file = Path(deriv_dir) / '.bidsignore'
 
@@ -112,17 +113,17 @@ def write_bidsignore(deriv_dir):
 def write_derivative_description(bids_dir, deriv_dir, dataset_links=None):
     from .. import __version__
 
-    DOWNLOAD_URL = f'https://github.com/nipreps/fmriprep/archive/{__version__}.tar.gz'
+    DOWNLOAD_URL = f'https://github.com/nipreps/petprep/archive/{__version__}.tar.gz'
 
     bids_dir = Path(bids_dir)
     deriv_dir = Path(deriv_dir)
     desc = {
-        'Name': 'fMRIPrep - fMRI PREProcessing workflow',
+        'Name': 'PETPrep - PET PREProcessing workflow',
         'BIDSVersion': '1.4.0',
         'DatasetType': 'derivative',
         'GeneratedBy': [
             {
-                'Name': 'fMRIPrep',
+                'Name': 'PETPrep',
                 'Version': __version__,
                 'CodeURL': DOWNLOAD_URL,
             }
@@ -133,15 +134,15 @@ def write_derivative_description(bids_dir, deriv_dir, dataset_links=None):
     }
 
     # Keys that can only be set by environment
-    if 'FMRIPREP_DOCKER_TAG' in os.environ:
+    if 'PETPREP_DOCKER_TAG' in os.environ:
         desc['GeneratedBy'][0]['Container'] = {
             'Type': 'docker',
-            'Tag': f'nipreps/fmriprep:{os.environ["FMRIPREP_DOCKER_TAG"]}',
+            'Tag': f'nipreps/petprep:{os.environ["PETPREP_DOCKER_TAG"]}',
         }
-    if 'FMRIPREP_SINGULARITY_URL' in os.environ:
+    if 'PETPREP_SINGULARITY_URL' in os.environ:
         desc['GeneratedBy'][0]['Container'] = {
             'Type': 'singularity',
-            'URI': os.getenv('FMRIPREP_SINGULARITY_URL'),
+            'URI': os.getenv('PETPREP_SINGULARITY_URL'),
         }
 
     # Keys deriving from source dataset
@@ -167,7 +168,7 @@ def write_derivative_description(bids_dir, deriv_dir, dataset_links=None):
 
 
 def validate_input_dir(exec_env, bids_dir, participant_label, need_T1w=True):
-    # Ignore issues and warnings that should not influence FMRIPREP
+    # Ignore issues and warnings that should not influence PETPrep
     import subprocess
     import tempfile
 

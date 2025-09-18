@@ -4,13 +4,25 @@
 (`www.nipreps.org <https://www.nipreps.org>`__) for the preprocessing of
 positron emission tomography (PET) imaging.
 
-.. image:: https://github.com/nipreps/petprep/actions/workflows/tests.yml/badge.svg
-  :target: https://github.com/nipreps/petprep/actions/workflows/tests.yml
-  :alt: Stable tests
+.. image:: https://img.shields.io/pypi/v/petprep.svg
+  :target: https://pypi.python.org/pypi/petprep/
+  :alt: Latest Version
+
+.. image:: https://codecov.io/gh/nipreps/petprep/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/nipreps/petprep
+   :alt: Code coverage
+
+.. image:: https://dl.circleci.com/status-badge/img/gh/nipreps/petprep/tree/main.svg?style=svg
+   :target: https://dl.circleci.com/status-badge/redirect/gh/nipreps/petprep/tree/main
+   :alt: CircleCI build
 
 .. image:: https://readthedocs.org/projects/petprep/badge/?version=latest
   :target: https://petprep.org/en/latest/?badge=latest
   :alt: Documentation Status
+
+.. image:: https://img.shields.io/badge/docker-nipreps/petprep-brightgreen.svg?logo=docker&style=flat
+  :target: https://hub.docker.com/r/nipreps/petprep/tags/
+  :alt: Docker image available!
 
 .. image:: https://chanzuckerberg.github.io/open-science/badges/CZI-EOSS.svg
   :target: https://czi.co/EOSS
@@ -18,7 +30,7 @@ positron emission tomography (PET) imaging.
 
 About
 -----
-.. image:: https://github.com/nipreps/petprep/blob/main/docs/_static/petprep-0.0.1.svg
+.. image:: https://raw.githubusercontent.com/nipreps/petprep/646083a04a9a4654568607c9a1472f982bb00254/docs/_static/petprep-0.0.1.svg
 
 *PETPrep* is a positron emission tomography (PET) data
 preprocessing pipeline that is designed to provide an easily accessible,

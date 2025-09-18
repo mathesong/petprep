@@ -191,7 +191,8 @@ def test_petref_report_connections(bids_root: Path, tmp_path: Path):
     assert ('petref', 'inputnode.petref') in edge['connect']
 
 
-def test_refmask_report_connections(bids_root: Path, tmp_path: Path):
+@pytest.mark.parametrize('pvc_method', [None, 'gtm'])
+def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method):
     """Ensure the reference mask report is passed to the reports workflow."""
     pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
     img = nb.Nifti1Image(np.zeros((2, 2, 2, 1)), np.eye(4))
@@ -212,6 +213,8 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path):
 
     with mock_config(bids_dir=bids_root):
         config.workflow.ref_mask_name = 'cerebellum'
+        if pvc_method is not None:
+            config.workflow.pvc_method = pvc_method
         wf = init_pet_fit_wf(
             pet_series=pet_series,
             precomputed=precomputed,
@@ -240,13 +243,16 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path):
     assert ('out', 'inputnode.gm_probseg') in edge_prob['connect']
 
     assert any(name.startswith('pet_ref_tacs_wf') for name in wf.list_node_names())
-    assert 'ds_ref_tacs' in wf.list_node_names()
-    ds_tacs = wf.get_node('ds_ref_tacs')
-    assert ds_tacs.inputs.ref == 'cerebellum'
-    assert ds_tacs.inputs.seg == config.workflow.seg
-    assert ds_tacs.inputs.desc == 'preproc'
-    edge_tacs = wf._graph.get_edge_data(wf.get_node('pet_ref_tacs_wf'), ds_tacs)
-    assert ('outputnode.timeseries', 'in_file') in edge_tacs['connect']
+    if pvc_method is None:
+        assert 'ds_ref_tacs' in wf.list_node_names()
+        ds_tacs = wf.get_node('ds_ref_tacs')
+        assert ds_tacs.inputs.ref == 'cerebellum'
+        assert ds_tacs.inputs.seg == config.workflow.seg
+        assert ds_tacs.inputs.desc == 'preproc'
+        edge_tacs = wf._graph.get_edge_data(wf.get_node('pet_ref_tacs_wf'), ds_tacs)
+        assert ('outputnode.timeseries', 'in_file') in edge_tacs['connect']
+    else:
+        assert 'ds_ref_tacs' not in wf.list_node_names()
 
 
 def test_pet_fit_stage1_inclusion(bids_root: Path, tmp_path: Path):
@@ -343,6 +349,7 @@ def test_init_refmask_report_wf(tmp_path: Path):
     ds = wf.get_node('ds_report_refmask')
     assert ds.inputs.desc == 'refmask'
     assert ds.inputs.ref == 'test'
+    assert ds.inputs.suffix == 'pet'
 
 
 def test_reports_spec_contains_refmask():

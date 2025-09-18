@@ -1,4 +1,4 @@
-"""fMRIPrep data files
+"""PETPrep data files
 
 .. autofunction:: load
 

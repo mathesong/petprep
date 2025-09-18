@@ -5,7 +5,7 @@
 Usage Notes
 ===========
 .. warning::
-   As of *PETPrep* 1.0.12, the software includes a tracking system
+   As of *PETPrep* 0.0.1, the software includes a tracking system
    to report usage statistics and errors. Users can opt-out using
    the ``--notrack`` command line argument.
 
@@ -16,7 +16,7 @@ The *PETPrep* workflow takes as principal input the path of the dataset
 that is to be processed.
 The input dataset is required to be in valid :abbr:`BIDS (Brain Imaging Data
 Structure)` format, and it must include at least one T1w structural image and
-(unless disabled with a flag) a BOLD series.
+(unless disabled with a flag) a PET scan.
 We highly recommend that you validate your dataset with the free, online
 `BIDS Validator <https://bids-standard.github.io/bids-validator/>`_.
 
@@ -56,13 +56,12 @@ Limitations and reasons not to use *PETPrep*
 1. Very narrow :abbr:`FoV (field-of-view)` images oftentimes do not contain
    enough information for standard image registration methods to work correctly.
    Also, problems may arise when extracting the brain from these data.
-   PETPrep supports pre-aligned BOLD series, and accepting pre-computed
-   derivatives such as brain masks is a target of future effort.
+   PETPrep supports pre-aligned PET data, and accepting pre-computed
+   derivatives such as brain masks and atlases are a target of future effort.
 2. *PETPrep* may also underperform for particular populations (e.g., infants) and
    non-human brains, although appropriate templates can be provided to overcome the
    issue.
-3. The "EPInorm" approach is currently not supported, although we plan to implement
-   this feature (see `#620 <https://github.com/nipreps/petprep/issues/620>`__).
+3. If you are working with blocking data, be aware that the motion correction step may not perform optimally.
 4. If you really want unlimited flexibility (which is obviously a double-edged sword).
 5. If you want students to suffer through implementing each step for didactic purposes,
    or to learn shell-scripting or Python along the way.
@@ -98,8 +97,7 @@ file on the host system: ::
         -v $HOME/.licenses/freesurfer/license.txt:/opt/freesurfer/license.txt \
         nipreps/petprep:latest \
         /data /out/out \
-        participant \
-        --ignore fieldmaps
+        participant
 
 Using FreeSurfer can also be enabled when using ``petprep-docker``: ::
 
@@ -107,7 +105,7 @@ Using FreeSurfer can also be enabled when using ``petprep-docker``: ::
         /path/to/data/dir /path/to/output/dir participant
     RUNNING: docker run --rm -it -v /path/to/data/dir:/data:ro \
         -v /home/user/.licenses/freesurfer/license.txt:/opt/freesurfer/license.txt \
-        -v /path/to_output/dir:/out nipreps/petprep:1.0.0 \
+        -v /path/to_output/dir:/out nipreps/petprep:0.0.1 \
         /data /out participant
     ...
 
@@ -119,7 +117,7 @@ would be equivalent to the latest example: ::
     $ petprep-docker /path/to/data/dir /path/to/output/dir participant
     RUNNING: docker run --rm -it -v /path/to/data/dir:/data:ro \
         -v /home/user/.licenses/freesurfer/license.txt:/opt/freesurfer/license.txt \
-        -v /path/to_output/dir:/out nipreps/petprep:1.0.0 \
+        -v /path/to_output/dir:/out nipreps/petprep:0.0.1 \
         /data /out participant
     ...
 
@@ -148,7 +146,7 @@ If precomputed results are found, they will be reused.
 
 BIDS Derivatives reuse
 ~~~~~~~~~~~~~~~~~~~~~~
-As of version 23.2.0, *PETPrep* can reuse precomputed derivatives that follow BIDS Derivatives
+As of version 0.0.1, *PETPrep* can reuse precomputed derivatives that follow BIDS Derivatives
 conventions. To provide derivatives to *PETPrep*, use the ``--derivatives`` (``-d``) flag one
 or more times.
 
@@ -171,14 +169,55 @@ This feature has several intended use-cases:
     tool, or a different registration tool, and then use PETPrep to generate the
     remaining derivatives.
   * To enable complicated meta-workflows, where PETPrep is run multiple times
-    with different options, and the results are combined. For example, the
-    `My Connectome <https://openneuro.org/datasets/ds000031/>`__ dataset contains
-    107 sessions for a single-subject. Processing of all sessions simultaneously
+    with different options, and the results are combined. Processing of all sessions simultaneously
     would be impractical, but the anatomical processing can be done once, and
-    then the functional processing can be done separately for each session.
+    then the PET processing can be done separately for each session.
 
 See also the ``--level`` flag, which can be used to control which derivatives are
 generated.
+
+Head motion correction
+----------------------
+*PETPrep* can correct for head motion in the PET data.
+The head motion is estimated using a frame-based robust registration approach to an unbiased mean 
+volume implemented in FreeSurfer's mri_robust_register (Reuter et al., 2010), combined with 
+preprocessing steps using tools from FSL (Jenkinson et al., 2012). Specifically, for the estimation 
+of head motion, each frame is initially smoothed with a Gaussian filter (full-width half-maximum [FWHM] of 10 mm, --hmc-fwhm 10), 
+followed by thresholding at 20% of the intensity range to reduce noise and improve registration 
+accuracy (removing stripe artefacts from filtered back projection reconstructions). 
+Per default, the motion is estimated selectively of frames acquired after 120 seconds post-injection of the tracer (--hmc-start-time 120),
+as frames before this often contain low count statistics. Frames preceding 120 seconds were corrected 
+using identical transformations as derived for the first frame after 120 seconds. The robust 
+registration (mri_robust_register) algorithm utilized settings optimized for PET data: intensity 
+scaling was enabled, automated sensitivity detection was activated, and the Frobenius norm threshold 
+for convergence was set at 0.0001, ensuring precise and consistent alignment across frames.
+
+By default, *PETPrep* evaluates the frames acquired after
+:option:`--hmc-start-time` and initializes motion correction with the
+frame exhibiting the highest tracer uptake. Provide a zero-based index
+with :option:`--hmc-init-frame` to override this choice. Adding
+:option:`--hmc-init-frame-fix` keeps whichever frame is selected (automatic or
+manual) fixed during robust template estimation to improve reproducibility.
+Iterations are automatically disabled to reduce runtime when :option:`--hmc-init-frame-fix` is
+used.
+
+Examples: ::
+
+    $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
+    $ petprep /data/bids_root /out participant --hmc-init-frame 10 --hmc-init-frame-fix
+
+Segmentation
+----------------
+*PETPrep* can segment the brain into different brain regions and extract time activity curves from these regions.
+The ``--seg`` flag selects the segmentation method to use.
+Available options are ``gtm`` (default) whole-brain segmentation from freesurfer, ``brainstem``, ``wm`` (white matter), ``thalamicNuclei``, ``hippocampusAmygdala``, ``raphe``, and ``limbic``.
+
+The ``gtm`` segmentation is a whole-brain segmentation that includes the
+cerebral cortex, subcortical structures, and cerebellum.
+
+To run the segmentation with the default ``gtm`` method, use: ::
+
+    $ petprep /data/bids_root /out participant --seg gtm 
 
 Partial volume correction
 -------------------------
@@ -190,10 +229,10 @@ Available ``petpvc`` methods are ``GTM``, ``LABBE``, ``RL``, ``VC``, ``RBV``,
 ``STC``, ``MTC``, ``LABBE+MTC``, ``MTC+VC``, ``MTC+RL``, ``LABBE+MTC+VC``,
 ``LABBE+MTC+RL``, ``IY``, ``IY+VC``, ``IY+RL``, ``MG``, ``MG+VC`` and ``MG+RL``.
 ``petsurfer`` provides ``GTM``, ``MG``, ``RBV`` and ``AGTM``.
-``AGTM`` runs in two steps: first the frames are motion corrected and averaged
+``AGTM`` runs in two steps: first the motion corrected frames are averaged
 to generate a reference image. Then a geometric transfer matrix is optimised
 using that reference together with the point spread function. As a
-consequence, mean motion correction of the input frames and a reliable PSF
+consequence, decent motion correction of the input frames and a reliable PSF
 estimate are prerequisites for ``AGTM`` to succeed.
 Use ``--pvc-psf`` to specify the point spread function FWHM, either as a single
 value or three values. When PVC is enabled, the corrected image automatically
@@ -202,7 +241,7 @@ from this PVC-corrected series. The corrected data are first aligned to the
 T1-weighted anatomy, and only the anatomical-to-template transforms are applied
 for further resampling.
 
-For example, to run PVC using the ``petpvc`` implementation and the ``GTM``
+For example, to run PVC using the ``petpvc`` implementation together with the ``--seg gtm`` (default) and the ``GTM``
 method with a 5 mm PSF::
 
     $ petprep /data/bids_root /out participant \
@@ -213,20 +252,40 @@ To run ``AGTM`` with ``petsurfer`` instead::
     $ petprep /data/bids_root /out participant \
         --pvc-tool petsurfer --pvc-method AGTM --pvc-psf 5
 
+Please note that the ``petsurfer`` implementation of PVC requires the gtm segmentation ``--seg gtm``, whereas
+the ``petpvc`` implementation can use any segmentation method.
 
 .. _cli_refmask:
 
 Reference region masks
 ----------------------
-*PETPrep* can build masks for reference regions used in quantification.
+*PETPrep* can build masks and time activity curves for reference regions used in pharmacokinetic quantification.
 Use ``--ref-mask-name`` to select a predefined region and
 ``--ref-mask-index`` to override the label indices.
+
+The available masks are and do not require ``--ref-mask-index`` to be specified:
+- ``cerebellum``: Cerebellar gray matter (requires the ``--seg gtm`` option).
+- ``semiovale``: White matter in the centrum semiovale (requires the ``--seg wm`` option).
+- ``neocortex``: Neocortical gray matter (requires the ``--seg gtm`` option).
+- ``thalamus``: Thalamic gray matter (requires the ``--seg gtm`` option).
+
 The presets are defined in ``petprep/data/reference_mask/config.json``.
+
 
 When a reference mask is created, *PETPrep* also generates a TSV table
 ``ref-<name>_morph.tsv`` saved under the ``anat/`` derivatives folder. This
 table mirrors the segmentation morph tables and contains three columns:
 ``index``, ``name`` and ``volume-mm3``.
+
+If you want to use a custom mask, you can provide it using the ``--ref-mask-name`` and ``--ref-mask-index`` options,
+specifying the name and indices of your choice for a given segmentation (``--seg``). 
+
+For example, to extract a mask of thalamus to use as a reference region, you can run: ::
+
+    $ petprep /data/bids_root /out participant \
+        --seg gtm --ref-mask-name thalamus --ref-mask-index 10 49
+
+The indices of the regions from a given segmentation can be found in the corresponding ``/anat/sub-<participant_label>_desc-<segmentation>_morph.tsv``.
 
 Troubleshooting
 ---------------
@@ -243,7 +302,7 @@ All bugs, concerns and enhancement requests for this software can be submitted h
 https://github.com/nipreps/petprep/issues.
 
 If you have a problem or would like to ask a question about how to use *PETPrep*,
-please submit a question to `NeuroStars.org <https://neurostars.org/tag/petprep>`_ with an ``petprep`` tag.
+please submit a question to `NeuroStars.org <https://neurostars.org/tag/petprep>`_ with a ``petprep`` tag.
 NeuroStars.org is a platform similar to StackOverflow but dedicated to neuroinformatics.
 
 Previous questions about *PETPrep* are available here:

@@ -3,6 +3,7 @@
 .. _`BIDS Derivatives`: https://bids-specification.readthedocs.io/en/stable/05-derivatives/01-introduction.html
 .. _`BEP 011`: https://bids-specification.readthedocs.io/en/bep011/05-derivatives/04-structural-derivatives.html
 .. _`BEP 012`: https://bids-specification.readthedocs.io/en/bep012/05-derivatives/05-functional-derivatives.html
+.. _`BEP 023`: https://docs.google.com/document/d/1yzsd1J9GT-aA0DWhdlgNr5LCu6_gvbjLyfvYq2FuxlY/edit?tab=t.0#heading=h.mqkmyp254xh6
 .. _Installation: installation.html
 .. _workflows: workflows.html
 .. _FSL: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/
@@ -24,3 +25,8 @@
 .. _tedana: https://github.com/me-ica/tedana
 .. _`T2* workflow`: https://tedana.readthedocs.io/en/latest/generated/tedana.workflows.t2smap_workflow.html#tedana.workflows.t2smap_workflow  # noqa
 .. _`citation boilerplate`: https://www.nipreps.org/intro/transparency/#citation-boilerplates
+.. _PETSurfer: https://surfer.nmr.mgh.harvard.edu/fswiki/PetSurfer
+.. _PETPVC: https://github.com/UCL/PETPVC
+.. _kinfitr: https://github.com/mathesong/kinfitr
+.. _PMOD: https://www.pmod.com/
+.. _BIDS: https://bids.neuroimaging.io/

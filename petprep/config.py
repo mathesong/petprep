@@ -21,12 +21,12 @@
 #     https://www.nipreps.org/community/licensing/
 #
 r"""
-A Python module to maintain unique, run-wide *fMRIPrep* settings.
+A Python module to maintain unique, run-wide *PETPrep* settings.
 
 This module implements the memory structures to keep a consistent, singleton config.
 Settings are passed across processes via filesystem, and a copy of the settings for
 each run and subject is left under
-``<fmriprep_dir>/sub-<participant_id>/log/<run_unique_id>/petprep.toml``.
+``<petprep_dir>/sub-<participant_id>/log/<run_unique_id>/petprep.toml``.
 Settings are stored using :abbr:`ToML (Tom's Markup Language)`.
 The module has a :py:func:`~petprep.config.to_filename` function to allow writing out
 the settings to hard disk in *ToML* format, which looks like:
@@ -37,7 +37,7 @@ the settings to hard disk in *ToML* format, which looks like:
    :caption: **Example file representation of PETPrep settings**.
 
 This config file is used to pass the settings across processes,
-using the :py:func:`~fmriprep.config.load` function.
+using the :py:func:`~petprep.config.load` function.
 
 Configuration sections
 ----------------------
@@ -198,7 +198,7 @@ try:
             if _proc_oc_kbytes.exists():
                 _oc_limit = _proc_oc_kbytes.read_text().strip()
             if _oc_limit in ('0', 'n/a') and Path('/proc/sys/vm/overcommit_ratio').exists():
-                _oc_limit = '{}%'.format(Path('/proc/sys/vm/overcommit_ratio').read_text().strip())
+                _oc_limit = f'{Path("/proc/sys/vm/overcommit_ratio").read_text().strip()}%'
 except Exception:  # noqa: S110, BLE001
     pass
 
@@ -396,7 +396,7 @@ class execution(_Config):
     debug = []
     """Debug mode(s)."""
     petprep_dir = None
-    """Root of fMRIPrep BIDS Derivatives dataset. Depends on output_layout."""
+    """Root of PETPrep BIDS Derivatives dataset. Depends on output_layout."""
     fs_license_file = _fs_license
     """An existing file containing a FreeSurfer license."""
     fs_subjects_dir = None
@@ -412,7 +412,7 @@ class execution(_Config):
     md_only_boilerplate = False
     """Do not convert boilerplate from MarkDown to LaTex and HTML."""
     notrack = False
-    """Do not collect telemetry information for *fMRIPrep*."""
+    """Do not collect telemetry information for *PETPrep*."""
     track_carbon = False
     """Tracks power draws using CodeCarbon package."""
     country_code = 'CAN'
@@ -561,9 +561,9 @@ class workflow(_Config):
     fs_no_resume = None
     """Adjust pipeline to reuse base template of existing longitudinal freesurfer"""
     ignore = None
-    """Ignore particular steps for *fMRIPrep*."""
+    """Ignore particular steps for *PETPrep*."""
     force = None
-    """Force particular steps for *fMRIPrep*."""
+    """Force particular steps for *PETPrep*."""
     level = None
     """Level of preprocessing to complete. One of ['minimal', 'resampling', 'full']."""
     longitudinal = False
@@ -588,7 +588,7 @@ class workflow(_Config):
     """Change default brain extraction template."""
     skull_strip_t1w = 'force'
     """Skip brain extraction of the T1w image (default is ``force``, meaning that
-    *fMRIPrep* will run brain extraction of the T1w)."""
+    *PETPrep* will run brain extraction of the T1w)."""
     spaces = None
     """Keeps the :py:class:`~niworkflows.utils.spaces.SpatialReferences`
     instance keeping standard and nonstandard spaces."""
@@ -596,6 +596,10 @@ class workflow(_Config):
     """FWHM for Gaussian smoothing prior to head-motion estimation."""
     hmc_start_time: float = 120.0
     """Time point (in seconds) at which head-motion estimation starts."""
+    hmc_init_frame: int | str | None = 'auto'
+    """Index of initial frame for head-motion estimation ('auto' selects highest uptake)."""
+    hmc_fix_frame: bool = False
+    """Whether to fix the reference frame during head-motion estimation."""
     seg = 'gtm'
     """Segmentation approach ('gtm', 'brainstem', 'thalamicNuclei',
     'hippocampusAmygdala', 'wm', 'raphe', 'limbic')."""
@@ -667,6 +671,8 @@ class seeds(_Config):
     """Seed used for antsRegistration, antsAI, antsMotionCorr"""
     numpy = None
     """Seed used by NumPy"""
+    freesurfer = None
+    """Seed used by FreeSurfer utilities"""
 
     @classmethod
     def init(cls):
@@ -678,6 +684,7 @@ class seeds(_Config):
         # functions to set program specific seeds
         cls.ants = _set_ants_seed()
         cls.numpy = _set_numpy_seed()
+        cls.freesurfer = _set_freesurfer_seed()
 
 
 def _set_ants_seed():
@@ -693,6 +700,13 @@ def _set_numpy_seed():
 
     val = random.randint(1, 65536)
     np.random.seed(val)
+    return val
+
+
+def _set_freesurfer_seed():
+    """Fix random seed for FreeSurfer utilities"""
+    val = random.randint(1, 65536)
+    os.environ['FREESURFER_RANDOM_SEED'] = str(val)
     return val
 
 
@@ -727,7 +741,7 @@ def load(filename, skip=None, init=True):
     Arguments
     ---------
     filename : :py:class:`os.PathLike`
-        TOML file containing fMRIPrep configuration.
+        TOML file containing PETPrep configuration.
     skip : dict or None
         Sets of values to ignore during load, keyed by section name
     init : `bool` or :py:class:`~collections.abc.Container`

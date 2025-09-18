@@ -49,7 +49,7 @@ def init_raw_petref_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.pet.reference import init_raw_petref_wf
+            from petprep.workflows.pet.reference import init_raw_petref_wf
             wf = init_raw_petref_wf()
 
     Parameters
@@ -80,7 +80,7 @@ def init_raw_petref_wf(
     workflow = Workflow(name=name)
     workflow.__desc__ = """\
 First, a reference volume was generated,
-using a custom methodology of *fMRIPrep*, for use in head motion correction.
+using a custom methodology of *PETPrep*, for use in head motion correction.
 """
 
     inputnode = pe.Node(

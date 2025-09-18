@@ -8,8 +8,8 @@ available and are used as the input.
 Certain processing steps will run only when the required metadata is
 available in the input dataset.
 
-A (very) high-level view of the simplest pipeline (for a single-band dataset with only
-one task, single-run, with no slice-timing information nor fieldmap acquisitions)
+A (very) high-level view of the simplest pipeline (for a single dataset with only
+a single tracer and single baseline)
 is presented below:
 
 .. workflow::
@@ -321,9 +321,9 @@ subgraph:
     from petprep import config
     from petprep.workflows.pet.fit import init_pet_fit_wf
     with mock_config():
-        bold_file = config.execution.bids_dir / 'sub-01' / 'func' \
-            / 'sub-01_task-mixedgamblestask_run-01_bold.nii.gz'
-        wf = init_pet_fit_wf(bold_series=[str(bold_file)], fieldmap_id="fmap")
+        pet_file = config.execution.bids_dir / 'sub-01' / 'pet' \
+            / 'sub-01_task-mixedgamblestask_pet.nii.gz'
+        wf = init_pet_fit_wf(pet_series=[str(pet_file)])
 
 Preprocessing of :abbr:`PET (positron emission tomography)` files is
 split into multiple sub-workflows described below.
@@ -391,29 +391,13 @@ parameters for each time-step are passed on to the
 
 The smoothing kernel width and onset of motion estimation can be
 customized via the :option:`--hmc-fwhm` and :option:`--hmc-start-time`
-command line options.  By default a 10 mm FWHM Gaussian is applied and
-estimation begins at 120 s.
-
-Susceptibility Distortion Correction (SDC)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-One of the major problems that affects :abbr:`EPI (echo planar imaging)` data
-is the spatial distortion caused by the inhomogeneity of the field inside
-the scanner.
-
-.. figure:: _static/unwarping.svg
-
-    Applying susceptibility-derived distortion correction, based on
-    fieldmap estimation.
-
-Please note that all routines for susceptibility-derived distortion correction
-have been excised off of *PETPrep* for utilization on other projects
-(e.g., `dMRIPrep <https://www.nipreps.org/dmriprep>`__).
-For more detailed documentation on
-:abbr:`SDC (susceptibility-derived distortion correction)`
-routines, check on the `SDCFlows component <https://www.nipreps.org/sdcflows>`__.
-
-Theory, methods and references are found within the
-`SDCFlows documentation <https://www.nipreps.org/sdcflows/master/api/sdcflows.workflows.fit.fieldmap.html>`__.
+command line options. By default, PETPrep initializes registration with
+the frame showing the highest tracer uptake after this start time. An
+explicit zero-based frame index can be provided with
+:option:`--hmc-init-frame`. Adding :option:`--hmc-init-frame-fix` keeps the chosen
+frame fixed during robust template estimation and disables iterations to
+reduce runtime. A 10 mm FWHM Gaussian is applied and estimation begins at
+120 s unless otherwise specified.
 
 Pre-processed PET in native space
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -435,14 +419,13 @@ A new *preproc* :abbr:`PET (positron emission tomography)` series is generated
 from the original data in the original space.
 All volumes in the :abbr:`PET (positron emission tomography)` series are
 resampled in their native space by concatenating the mappings found in previous
-correction workflows (:abbr:`HMC (head-motion correction)` and
-:abbr:`SDC (susceptibility-derived distortion correction)` if executed)
+correction workflows (:abbr:`HMC (head-motion correction)`)
 for a one-shot interpolation process.
 Interpolation uses a Lanczos kernel.
 
 .. _pet_reg:
 
-EPI to T1w registration
+PET to T1w registration
 ~~~~~~~~~~~~~~~~~~~~~~~
 :py:func:`~petprep.workflows.pet.registration.init_bbreg_wf`
 
@@ -601,11 +584,6 @@ Confounds estimation
     wf = init_pet_confs_wf(
         name="discover_wf",
         mem_gb=1,
-        metadata={
-            "FrameTimesStart": [0, 2, 4, 6],
-            "FrameDuration": [2, 2, 2, 2],
-        },
-        regressors_all_comps=False,
         regressors_dvars_th=1.5,
         regressors_fd_th=0.5,
     )
