@@ -445,10 +445,9 @@ def init_pet_fit_wf(
                 DerivativesDataSink(
                     base_directory=config.execution.petprep_dir,
                     suffix='tacs',
-                    seg=config.workflow.seg,
                     desc='preproc',
-                    ref=config.workflow.ref_mask_name,
-                    allowed_entities=('seg', 'ref'),
+                    label=config.workflow.ref_mask_name,
+                    allowed_entities=('label',),
                     TaskName=metadata.get('TaskName'),
                     **timing_parameters,
                 ),

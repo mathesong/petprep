@@ -323,9 +323,9 @@ table containing the mean uptake within that region::
 
   sub-<subject_label>/
     pet/
-      sub-<subject_label>_[specifiers]_seg-<seg>_ref-<ref>_desc-preproc_tacs.tsv
+      sub-<subject_label>_[specifiers]_label-<label>_desc-preproc_tacs.tsv
 
-The ``ref`` entity captures the reference region identifier provided via the
+The ``label`` entity captures the reference region identifier provided via the
 :ref:`CLI options <cli_refmask>` ``--ref-mask-name`` and ``--ref-mask-index``.
 As with the primary TACs, ``desc-preproc`` reflects use of the preprocessed PET
 series.
