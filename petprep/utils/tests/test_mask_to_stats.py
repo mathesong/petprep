@@ -1,6 +1,6 @@
-import pandas as pd
 import nibabel as nb
 import numpy as np
+import pandas as pd
 
 from petprep.utils.reference_mask import mask_to_stats
 

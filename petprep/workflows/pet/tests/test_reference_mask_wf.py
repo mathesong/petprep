@@ -1,9 +1,7 @@
-import numpy as np
-import nibabel as nb
 
+from .... import data
 from ...tests import mock_config
 from ..reference_mask import init_pet_refmask_wf
-from .... import data
 
 
 def test_refmask_morph_nodes():

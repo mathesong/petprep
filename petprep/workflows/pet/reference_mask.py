@@ -26,10 +26,10 @@ from __future__ import annotations
 
 import nipype.pipeline.engine as pe
 from nipype.interfaces import utility as niu
-from petprep.interfaces import DerivativesDataSink
 
-from petprep.interfaces.reference_mask import ExtractRefRegion
 from petprep import config
+from petprep.interfaces import DerivativesDataSink
+from petprep.interfaces.reference_mask import ExtractRefRegion
 from petprep.utils.reference_mask import mask_to_stats
 
 
