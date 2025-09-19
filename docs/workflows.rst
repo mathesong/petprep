@@ -560,7 +560,7 @@ image ``seg-<seg>_dseg.nii.gz`` and a TSV table of region volumes
 ``seg-<seg>_morph.tsv`` saved under the ``anat/`` derivatives folder.
 
 Reference masks generated via ``--ref-mask-name`` create a similar
-``ref-<name>_morph.tsv`` file. These TSVs share the same columns as the
+``label-<name>_desc-ref_morph.tsv`` file. These TSVs share the same columns as the
 segmentation morph tables: ``index``, ``name`` and ``volume-mm3``.
 
 For example, the raphe segmentation can be enabled with::
