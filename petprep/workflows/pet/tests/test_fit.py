@@ -225,22 +225,19 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
     ref_ds = wf.get_node('ds_refmask_wf').get_node('ds_refmask')
     assert ref_ds.inputs.desc == 'ref'
     assert ref_ds.inputs.label == 'cerebellum'
+    assert 'label' in ref_ds.interface._allowed_entities
     assert 'func_fit_reports_wf.pet_t1_refmask_report' in wf.list_node_names()
     reports_node = wf.get_node('func_fit_reports_wf')
     edge = wf._graph.get_edge_data(wf.get_node('outputnode'), reports_node)
     assert ('refmask', 'inputnode.refmask') in edge['connect']
 
-    petref_buffer_node = wf.get_node('petref_buffer')
     ds_refmask = wf.get_node('ds_refmask_wf')
-    petref_edge = wf._graph.get_edge_data(petref_buffer_node, ds_refmask)
-    assert (
-        'pet_file',
-        'inputnode.source_files',
-    ) in petref_edge['connect']
+    gm_node = wf.get_node('select_gm_probseg')
+    gm_edge = wf._graph.get_edge_data(gm_node, ds_refmask)
+    assert ('out', 'inputnode.source_files') in gm_edge['connect']
     seg_edge = wf._graph.get_edge_data(wf.get_node('inputnode'), ds_refmask)
     assert (
-        'segmentation',
-        'inputnode.segmentation',
+        'in3',
     ) in seg_edge['connect']
 
     merge_node = ds_refmask.get_node('merge_source_files')
@@ -250,7 +247,6 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
         'in2',
     ) in merge_edge['connect']
 
-    gm_node = wf.get_node('select_gm_probseg')
     edge_prob = wf._graph.get_edge_data(gm_node, wf.get_node('pet_refmask_wf'))
     assert ('out', 'inputnode.gm_probseg') in edge_prob['connect']
 
@@ -259,6 +255,7 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
         assert 'ds_ref_tacs' in wf.list_node_names()
         ds_tacs = wf.get_node('ds_ref_tacs')
         assert ds_tacs.inputs.label == 'cerebellum'
+        assert 'label' in ds_tacs.interface._allowed_entities
         assert 'seg' not in ds_tacs.interface._allowed_entities
         assert not hasattr(ds_tacs.inputs, 'seg')
         assert ds_tacs.inputs.desc == 'preproc'
@@ -362,6 +359,7 @@ def test_init_refmask_report_wf(tmp_path: Path):
     ds = wf.get_node('ds_report_refmask')
     assert ds.inputs.desc == 'ref'
     assert ds.inputs.label == 'test'
+    assert 'label' in ds.interface._allowed_entities
     assert ds.inputs.suffix == 'pet'
 
 
