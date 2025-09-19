@@ -492,13 +492,14 @@ def init_pet_fit_wf(
                     ds_refmask_wf,
                     [
                         ('segmentation', 'inputnode.segmentation'),
+                        ('t1w_preproc', 'inputnode.anat_sources'),
                     ],
                 ),
                 (
-                    petref_buffer,
+                    gm_select,
                     ds_refmask_wf,
                     [
-                        ('pet_file', 'inputnode.source_files'),
+                        ('out', 'inputnode.source_files'),
                     ],
                 ),
                 (

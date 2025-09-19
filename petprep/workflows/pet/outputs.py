@@ -493,12 +493,14 @@ def init_ds_refmask_wf(
     workflow = pe.Workflow(name=name)
 
     inputnode = pe.Node(
-        niu.IdentityInterface(fields=['source_files', 'segmentation', 'refmask']),
+        niu.IdentityInterface(
+            fields=['source_files', 'anat_sources', 'segmentation', 'refmask']
+        ),
         name='inputnode',
     )
     outputnode = pe.Node(niu.IdentityInterface(fields=['refmask']), name='outputnode')
 
-    merge_source_files = pe.Node(niu.Merge(2), name='merge_source_files')
+    merge_source_files = pe.Node(niu.Merge(3), name='merge_source_files')
 
     sources = pe.Node(
         BIDSURI(
@@ -526,7 +528,8 @@ def init_ds_refmask_wf(
     workflow.connect([
         (inputnode, merge_source_files, [
             ('source_files', 'in1'),
-            ('segmentation', 'in2'),
+            ('anat_sources', 'in2'),
+            ('segmentation', 'in3'),
         ]),
         (merge_source_files, sources, [('out', 'in1')]),
         (inputnode, ds_refmask, [
