@@ -138,7 +138,7 @@ sections:
     caption: PET to anatomical alignment check
     static: false
     subtitle: Additional PET Visualizations
-  - bids: {datatype: figures, desc: refmask, suffix: pet}
+  - bids: {datatype: figures, desc: ref, suffix: pet}
     caption: Reference region mask overlaid on the PET reference and anatomical.
     static: false
     subtitle: Reference mask check

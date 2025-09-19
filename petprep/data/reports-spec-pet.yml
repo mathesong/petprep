@@ -9,7 +9,7 @@ sections:
   - bids: {datatype: figures, desc: carpetplot, suffix: pet}
   - bids: {datatype: figures, desc: confoundcorr, suffix: pet}
   - bids: {datatype: figures, desc: coreg, suffix: pet}
-  - bids: {datatype: figures, desc: refmask, suffix: pet}
+  - bids: {datatype: figures, desc: ref, suffix: pet}
     caption: Reference region mask overlaid on the PET reference and anatomical data.
     static: false
     subtitle: Reference mask check
