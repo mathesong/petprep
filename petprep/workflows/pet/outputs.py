@@ -493,9 +493,7 @@ def init_ds_refmask_wf(
     workflow = pe.Workflow(name=name)
 
     inputnode = pe.Node(
-        niu.IdentityInterface(
-            fields=['source_files', 'anat_sources', 'segmentation', 'refmask']
-        ),
+        niu.IdentityInterface(fields=['source_files', 'anat_sources', 'segmentation', 'refmask']),
         name='inputnode',
     )
     outputnode = pe.Node(niu.IdentityInterface(fields=['refmask']), name='outputnode')

@@ -236,9 +236,7 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
     gm_edge = wf._graph.get_edge_data(gm_node, ds_refmask)
     assert ('out', 'inputnode.source_files') in gm_edge['connect']
     seg_edge = wf._graph.get_edge_data(wf.get_node('inputnode'), ds_refmask)
-    assert (
-        'in3',
-    ) in seg_edge['connect']
+    assert ('in3',) in seg_edge['connect']
 
     merge_node = ds_refmask.get_node('merge_source_files')
     merge_edge = ds_refmask._graph.get_edge_data(ds_refmask.get_node('inputnode'), merge_node)
@@ -369,8 +367,7 @@ def test_reports_spec_contains_refmask():
         spec = yaml.safe_load((data.load.readable(fname)).read_text())
         pet_section = next(s for s in spec['sections'] if s['name'] == 'PET')
         assert any(
-            r.get('bids', {}).get('desc') == 'ref'
-            and 'label' not in r.get('bids', {})
+            r.get('bids', {}).get('desc') == 'ref' and 'label' not in r.get('bids', {})
             for r in pet_section['reportlets']
         )
 
