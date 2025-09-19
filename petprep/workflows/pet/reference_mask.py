@@ -72,9 +72,9 @@ def init_pet_refmask_wf(
     ds_morph_tsv = pe.Node(
         DerivativesDataSink(
             base_directory=config.execution.petprep_dir,
-            ref=ref_mask_name,
-            desc='refmask',
-            allowed_entities=('ref',),
+            label=ref_mask_name,
+            desc='ref',
+            allowed_entities=('label',),
             suffix='morph',
             extension='.tsv',
             datatype='anat',

@@ -36,8 +36,8 @@ def test_datasink_datatype(tmp_path: Path):
         wf = init_ds_refmask_wf(output_dir=out_dir, ref_name='test')
         ref_node = wf.get_node('ds_refmask')
         assert ref_node.inputs.datatype == 'anat'
-        assert ref_node.inputs.desc == 'refmask'
-        assert ref_node.inputs.ref == 'test'
+        assert ref_node.inputs.desc == 'ref'
+        assert ref_node.inputs.label == 'test'
         wf = init_ds_pet_native_wf(
             bids_root=bids_dir,
             output_dir=out_dir,
@@ -81,7 +81,7 @@ def test_refmask_sources(tmp_path: Path):
 
         wf.run()
 
-        out_files = list(out_dir.rglob('*desc-refmask*_mask.nii.gz'))
+        out_files = list(out_dir.rglob('*desc-ref*_mask.nii.gz'))
         assert out_files, 'Reference mask derivative was not generated'
         out_file = Path(out_files[0])
         metadata = json.loads(out_file.with_suffix('').with_suffix('.json').read_text())

@@ -191,10 +191,10 @@ def init_func_fit_reports_wf(
         ds_refmask_report = pe.Node(
             DerivativesDataSink(
                 base_directory=output_dir,
-                desc='refmask',
-                ref=ref_name,
+                desc='ref',
+                label=ref_name,
                 datatype='figures',
-                allowed_entities=('ref',),
+                allowed_entities=('label',),
             ),
             name='ds_report_refmask',
             run_without_submitting=True,
@@ -329,11 +329,11 @@ def init_func_fit_reports_wf(
         ds_pet_t1_refmask_report = pe.Node(
             DerivativesDataSink(
                 base_directory=output_dir,
-                desc='refmask',
-                ref=ref_name,
+                desc='ref',
+                label=ref_name,
                 suffix='pet',
                 datatype='figures',
-                allowed_entities=('ref',),
+                allowed_entities=('label',),
             ),
             name='ds_pet_t1_refmask_report',
         )
@@ -516,9 +516,9 @@ def init_ds_refmask_wf(
             base_directory=output_dir,
             datatype='anat',
             suffix='mask',
-            desc='refmask',
-            ref=ref_name,
-            allowed_entities=('ref',),
+            desc='ref',
+            label=ref_name,
+            allowed_entities=('label',),
             compress=True,
         ),
         name='ds_refmask',
@@ -1002,10 +1002,10 @@ def init_refmask_report_wf(
     ds_mask_report = pe.Node(
         DerivativesDataSink(
             base_directory=output_dir,
-            desc='refmask',
-            ref=ref_name,
+            desc='ref',
+            label=ref_name,
             datatype='figures',
-            allowed_entities=('ref',),
+            allowed_entities=('label',),
             suffix='pet',
         ),
         name='ds_report_refmask',
