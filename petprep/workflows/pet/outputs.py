@@ -526,8 +526,8 @@ def init_ds_refmask_wf(
     workflow.connect([
         (inputnode, merge_source_files, [
             ('source_files', 'in1'),
-            ('anat_sources', 'in2'),
-            ('segmentation', 'in3'),
+            ('segmentation', 'in2'),
+            ('anat_sources', 'in3'),
         ]),
         (merge_source_files, sources, [('out', 'in1')]),
         (inputnode, ds_refmask, [
