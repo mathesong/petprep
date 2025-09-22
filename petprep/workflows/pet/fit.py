@@ -445,10 +445,9 @@ def init_pet_fit_wf(
                 DerivativesDataSink(
                     base_directory=config.execution.petprep_dir,
                     suffix='tacs',
-                    seg=config.workflow.seg,
                     desc='preproc',
-                    ref=config.workflow.ref_mask_name,
-                    allowed_entities=('seg', 'ref'),
+                    label=config.workflow.ref_mask_name,
+                    allowed_entities=('label',),
                     TaskName=metadata.get('TaskName'),
                     **timing_parameters,
                 ),
@@ -489,10 +488,18 @@ def init_pet_fit_wf(
                     ],
                 ),
                 (
-                    petref_buffer,
+                    inputnode,
                     ds_refmask_wf,
                     [
-                        ('pet_file', 'inputnode.source_files'),
+                        ('segmentation', 'inputnode.segmentation'),
+                        ('t1w_preproc', 'inputnode.anat_sources'),
+                    ],
+                ),
+                (
+                    gm_select,
+                    ds_refmask_wf,
+                    [
+                        ('out', 'inputnode.source_files'),
                     ],
                 ),
                 (

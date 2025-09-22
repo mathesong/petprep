@@ -223,22 +223,28 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
 
     assert 'ds_refmask_wf.ds_refmask' in wf.list_node_names()
     ref_ds = wf.get_node('ds_refmask_wf').get_node('ds_refmask')
-    assert ref_ds.inputs.desc == 'refmask'
-    assert ref_ds.inputs.ref == 'cerebellum'
+    assert ref_ds.inputs.desc == 'ref'
+    assert ref_ds.inputs.label == 'cerebellum'
+    assert 'label' in ref_ds.interface._allowed_entities
     assert 'func_fit_reports_wf.pet_t1_refmask_report' in wf.list_node_names()
     reports_node = wf.get_node('func_fit_reports_wf')
     edge = wf._graph.get_edge_data(wf.get_node('outputnode'), reports_node)
     assert ('refmask', 'inputnode.refmask') in edge['connect']
 
-    petref_buffer_node = wf.get_node('petref_buffer')
     ds_refmask = wf.get_node('ds_refmask_wf')
-    petref_edge = wf._graph.get_edge_data(petref_buffer_node, ds_refmask)
-    assert (
-        'pet_file',
-        'inputnode.source_files',
-    ) in petref_edge['connect']
-
     gm_node = wf.get_node('select_gm_probseg')
+    gm_edge = wf._graph.get_edge_data(gm_node, ds_refmask)
+    assert ('out', 'inputnode.source_files') in gm_edge['connect']
+    seg_edge = wf._graph.get_edge_data(wf.get_node('inputnode'), ds_refmask)
+    assert ('segmentation', 'inputnode.segmentation') in seg_edge['connect']
+
+    merge_node = ds_refmask.get_node('merge_source_files')
+    merge_edge = ds_refmask._graph.get_edge_data(ds_refmask.get_node('inputnode'), merge_node)
+    assert (
+        'segmentation',
+        'in2',
+    ) in merge_edge['connect']
+
     edge_prob = wf._graph.get_edge_data(gm_node, wf.get_node('pet_refmask_wf'))
     assert ('out', 'inputnode.gm_probseg') in edge_prob['connect']
 
@@ -246,8 +252,10 @@ def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method)
     if pvc_method is None:
         assert 'ds_ref_tacs' in wf.list_node_names()
         ds_tacs = wf.get_node('ds_ref_tacs')
-        assert ds_tacs.inputs.ref == 'cerebellum'
-        assert ds_tacs.inputs.seg == config.workflow.seg
+        assert ds_tacs.inputs.label == 'cerebellum'
+        assert 'label' in ds_tacs.interface._allowed_entities
+        assert 'seg' not in ds_tacs.interface._allowed_entities
+        assert not hasattr(ds_tacs.inputs, 'seg')
         assert ds_tacs.inputs.desc == 'preproc'
         edge_tacs = wf._graph.get_edge_data(wf.get_node('pet_ref_tacs_wf'), ds_tacs)
         assert ('outputnode.timeseries', 'in_file') in edge_tacs['connect']
@@ -347,8 +355,9 @@ def test_init_refmask_report_wf(tmp_path: Path):
     wf = init_refmask_report_wf(output_dir=str(tmp_path), ref_name='test')
     assert 'mask_report' in wf.list_node_names()
     ds = wf.get_node('ds_report_refmask')
-    assert ds.inputs.desc == 'refmask'
-    assert ds.inputs.ref == 'test'
+    assert ds.inputs.desc == 'ref'
+    assert ds.inputs.label == 'test'
+    assert 'label' in ds.interface._allowed_entities
     assert ds.inputs.suffix == 'pet'
 
 
@@ -357,7 +366,10 @@ def test_reports_spec_contains_refmask():
     for fname in ('reports-spec.yml', 'reports-spec-pet.yml'):
         spec = yaml.safe_load((data.load.readable(fname)).read_text())
         pet_section = next(s for s in spec['sections'] if s['name'] == 'PET')
-        assert any(r.get('bids', {}).get('desc') == 'refmask' for r in pet_section['reportlets'])
+        assert any(
+            r.get('bids', {}).get('desc') == 'ref' and 'label' not in r.get('bids', {})
+            for r in pet_section['reportlets']
+        )
 
 
 def test_refmask_reports_omitted(bids_root: Path, tmp_path: Path):

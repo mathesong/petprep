@@ -271,6 +271,12 @@ The available masks are and do not require ``--ref-mask-index`` to be specified:
 
 The presets are defined in ``petprep/data/reference_mask/config.json``.
 
+
+When a reference mask is created, *PETPrep* also generates a TSV table
+``label-<name>_desc-ref_morph.tsv`` saved under the ``anat/`` derivatives folder. This
+table mirrors the segmentation morph tables and contains three columns:
+``index``, ``name`` and ``volume-mm3``.
+
 If you want to use a custom mask, you can provide it using the ``--ref-mask-name`` and ``--ref-mask-index`` options,
 specifying the name and indices of your choice for a given segmentation (``--seg``). 
 
@@ -279,7 +285,7 @@ For example, to extract a mask of thalamus to use as a reference region, you can
     $ petprep /data/bids_root /out participant \
         --seg gtm --ref-mask-name thalamus --ref-mask-index 10 49
 
-The indices of the regions from a given segmentation can be found in the corresponding ``/anat/sub-<participant_label>_desc-<segmentation>_morph.tsv``.
+The indices of the regions from a given segmentation can be found in the corresponding ``/anat/sub-<participant_label>_seg-<segmentation>_morph.tsv``.
 
 Troubleshooting
 ---------------

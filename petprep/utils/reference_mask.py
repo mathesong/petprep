@@ -67,3 +67,30 @@ def generate_reference_region(
         mask = mask.astype(np.uint8)
 
     return nib.Nifti1Image(mask, affine, header)
+
+
+def mask_to_stats(mask_file: str, mask_name: str) -> str:
+    """Generate a TSV table of morphological statistics from a binary mask."""
+    from pathlib import Path
+
+    import nibabel as nb
+    import numpy as np
+    import pandas as pd
+
+    mask_file = Path(mask_file)
+    img = nb.load(mask_file)
+    data = img.get_fdata() > 0
+    voxel_vol_mm3 = np.prod(img.header.get_zooms())
+    volume_mm3 = float(data.sum() * voxel_vol_mm3)
+
+    df = pd.DataFrame(
+        {
+            'index': [1],
+            'name': [mask_name],
+            'volume-mm3': [volume_mm3],
+        }
+    )
+
+    out_file = mask_file.with_suffix('.tsv')
+    df.to_csv(out_file, sep='\t', index=False)
+    return str(out_file)
