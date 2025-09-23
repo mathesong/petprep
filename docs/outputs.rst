@@ -304,8 +304,8 @@ corresponding PET time series::
 
 **Time activity curves**.
 The workflow :func:`petprep.workflows.pet.tacs.init_pet_tacs_wf` extracts mean uptake
-from an anatomical segmentation. The resulting table has ``FrameTimesStart`` and
-``FrameTimesEnd`` columns followed by one column per region::
+from an anatomical segmentation. The resulting table has ``frame_start`` and
+``frame_end`` columns followed by one column per region::
 
   sub-<subject_label>/
     pet/

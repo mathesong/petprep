@@ -75,8 +75,8 @@ class ExtractTACs(SimpleInterface):
 
         frame_times_end = np.add(frame_times, frame_durations).tolist()
         df = pd.DataFrame(curves)
-        df.insert(0, 'FrameTimesEnd', frame_times_end)
-        df.insert(0, 'FrameTimesStart', list(frame_times))
+        df.insert(0, 'frame_end', frame_times_end)
+        df.insert(0, 'frame_start', list(frame_times))
 
         out_file = fname_presuffix(
             self.inputs.in_file,
@@ -133,8 +133,8 @@ class ExtractRefTAC(SimpleInterface):
         timeseries = pet_data[mask, :].mean(axis=0)
         frame_times_end = np.add(frame_times, frame_durations).tolist()
         df = pd.DataFrame({self.inputs.ref_mask_name: timeseries})
-        df.insert(0, 'FrameTimesEnd', frame_times_end)
-        df.insert(0, 'FrameTimesStart', list(frame_times))
+        df.insert(0, 'frame_end', frame_times_end)
+        df.insert(0, 'frame_start', list(frame_times))
 
         out_file = fname_presuffix(
             self.inputs.in_file,

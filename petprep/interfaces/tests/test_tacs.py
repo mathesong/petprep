@@ -49,7 +49,7 @@ def test_ExtractTACs(tmp_path):
     res = node.run()
 
     out = pd.read_csv(res.outputs.out_file, sep='\t')
-    assert list(out.columns) == ['FrameTimesStart', 'FrameTimesEnd', 'A', 'B']
+    assert list(out.columns) == ['frame_start', 'frame_end', 'A', 'B']
     assert np.allclose(out['A'], [1, 2])
     assert np.allclose(out['B'], [1, 2])
 
@@ -199,7 +199,7 @@ def test_ExtractRefTAC(tmp_path):
     res = node.run()
 
     out = pd.read_csv(res.outputs.out_file, sep='\t')
-    assert list(out.columns) == ['FrameTimesStart', 'FrameTimesEnd', 'ref']
+    assert list(out.columns) == ['frame_start', 'frame_end', 'ref']
     assert np.allclose(out['ref'], [1, 2])
 
 
