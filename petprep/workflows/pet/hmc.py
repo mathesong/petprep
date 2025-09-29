@@ -271,7 +271,9 @@ FreeSurfer's ``mri_robust_template``.
         name='smooth',
         iterfield=['in_file'],
     )
-    thresh = pe.MapNode(fsl.maths.Threshold(thresh=20, use_robust_range=True), name='thresh', iterfield=['in_file'])
+    thresh = pe.MapNode(
+        fsl.maths.Threshold(thresh=20, use_robust_range=True), name='thresh', iterfield=['in_file']
+        )
 
     # Select reference frame
     start_frame = pe.Node(
