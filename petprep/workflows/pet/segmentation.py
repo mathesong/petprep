@@ -55,7 +55,7 @@ def _merge_ha_labels(lh_file: str, rh_file: str) -> str:
     out_img = lh_img.__class__(data, lh_img.affine, lh_img.header)
     out_img.set_data_dtype(np.int16)
 
-    out_file = Path("hippocampusAmygdala_dseg.nii.gz").absolute()
+    out_file = Path('hippocampusAmygdala_dseg.nii.gz').absolute()
     out_img.to_filename(out_file)
     return str(out_file)
 
