@@ -113,7 +113,7 @@ class ExtractRefTAC(SimpleInterface):
         if pet_img.ndim == 3:
             pet_data = pet_data[..., np.newaxis]
 
-        mask = nb.load(self.inputs.mask_file).get_fdata() > 0
+        mask = np.rint(nb.load(self.inputs.mask_file).get_fdata()).astype(np.int16) > 0
 
         with open(self.inputs.metadata) as f:
             metadata = json.load(f)
