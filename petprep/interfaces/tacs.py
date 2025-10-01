@@ -49,7 +49,7 @@ class ExtractTACs(SimpleInterface):
         if len(frame_times) != len(frame_durations):
             raise ValueError('FrameTimesStart and FrameDuration must have equal length')
 
-        segmentation_data = np.rint(nb.load(self.inputs.segmentation).get_fdata().astype(int))
+        segmentation_data = np.rint(nb.load(self.inputs.segmentation).get_fdata()).astype(int)
         pet_data = pet_img.get_fdata()
 
         unique_labels = np.unique(segmentation_data)
