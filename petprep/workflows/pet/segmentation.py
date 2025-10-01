@@ -48,13 +48,14 @@ def _merge_ha_labels(lh_file: str, rh_file: str) -> str:
     if not np.allclose(lh_img.affine, rh_img.affine) or lh_img.shape != rh_img.shape:
         raise ValueError('Hemisphere segmentations do not align')
 
-    lh_data = np.asanyarray(lh_img.dataobj)
-    rh_data = np.asanyarray(rh_img.dataobj)
-    data = np.where(rh_data > 0, rh_data, lh_data)
+    lh_labels = np.rint(lh_img.get_fdata()).astype(np.int16)
+    rh_labels = np.rint(rh_img.get_fdata()).astype(np.int16)
+    data = np.where(rh_labels != 0, rh_labels, lh_labels).astype(np.int16)
 
     out_img = lh_img.__class__(data, lh_img.affine, lh_img.header)
-    out_img.set_data_dtype('int16')
-    out_file = Path('hippocampusAmygdala_dseg.nii.gz').absolute()
+    out_img.set_data_dtype(np.int16)
+
+    out_file = Path("hippocampusAmygdala_dseg.nii.gz").absolute()
     out_img.to_filename(out_file)
     return str(out_file)
 
