@@ -49,7 +49,7 @@ class ExtractTACs(SimpleInterface):
         if len(frame_times) != len(frame_durations):
             raise ValueError('FrameTimesStart and FrameDuration must have equal length')
 
-        segmentation_data = nb.load(self.inputs.segmentation).get_fdata().astype(int)
+        segmentation_data = np.rint(nb.load(self.inputs.segmentation).get_fdata()).astype(int)
         pet_data = pet_img.get_fdata()
 
         unique_labels = np.unique(segmentation_data)
@@ -113,7 +113,7 @@ class ExtractRefTAC(SimpleInterface):
         if pet_img.ndim == 3:
             pet_data = pet_data[..., np.newaxis]
 
-        mask = nb.load(self.inputs.mask_file).get_fdata() > 0
+        mask = np.rint(nb.load(self.inputs.mask_file).get_fdata()).astype(np.int16) > 0
 
         with open(self.inputs.metadata) as f:
             metadata = json.load(f)
