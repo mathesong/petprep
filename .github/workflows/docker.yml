@@ -29,6 +29,7 @@ jobs:
         with:
           fetch-depth: 200
           fetch-tags: true
+          ref: ${{ github.ref }}
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
