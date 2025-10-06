@@ -7,7 +7,7 @@ Bug-fix release in the 0.0.x series.
 * FIX: Update TACs interface to match PET-BIDS derivatives spec (#146)
 * ENH: Create morph refmask and derivatives (#143)
 * DOC: Fix the path to the `sample_report` folder in the output doc (#97)
-* DOC: Add preliminary release to "Whats new" page (#103)
+* DOC: Add preliminary release to "What is new" page (#103)
 * REF: Remove unused parameters from PET confound workflow initialization (#107)
 
 0.0.2 (2025-09-16)
