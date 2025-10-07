@@ -25,7 +25,7 @@ def generate_reference_region(
         nib.Nifti1Image: Final reference mask.
     """
 
-    data = seg_img.get_fdata()
+    data = np.rint(seg_img.get_fdata()).astype(int)
     affine = seg_img.affine
     header = seg_img.header
     zooms = header.get_zooms()
