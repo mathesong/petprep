@@ -601,17 +601,15 @@ Partial volume correction
     :graph2use: colored
     :simple_form: yes
 
-    from importlib import resources
+    from petprep.workflows.tests import mock_config
     from petprep.workflows.pet.pvc import init_pet_pvc_wf
 
-    config_path = resources.files('petprep').joinpath('data', 'pvc', 'config.json')
-
-    wf = init_pet_pvc_wf(
-        name="pvc_wf",
-        tool="PETPVC",
-        method="GTM",
-        config_path=config_path,
-    )
+    with mock_config():
+        wf = init_pet_pvc_wf(
+            name="pvc_wf",
+            tool="PETPVC",
+            method="GTM"
+        )
 
 Partial volume correction (PVC) is a process that attempts to correct for the partial 
 volume effects that occur when a single voxel contains multiple tissue types. This is 
