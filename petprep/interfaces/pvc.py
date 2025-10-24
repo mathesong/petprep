@@ -31,6 +31,7 @@ class ClipValues(BaseInterface):
     Args:
         BaseInterface: Base interface class for all Nipype interfaces.
     """
+
     input_spec = ClipValuesInputSpec
     output_spec = ClipValuesOutputSpec
 
@@ -71,6 +72,7 @@ class Binarise4DSegmentation(BaseInterface):
         BaseInterface: Base interface class for all Nipype interfaces
 
     """
+
     input_spec = Binarise4DSegmentationInputSpec
     output_spec = Binarise4DSegmentationOutputSpec
 
@@ -115,6 +117,7 @@ class StackTissueProbabilityMaps(BaseInterface):
     Args:
         BaseInterface: Base interface class for all Nipype interfaces.
     """
+
     input_spec = StackTissueProbabilityMapsInputSpec
     output_spec = StackTissueProbabilityMapsOutputSpec
 
