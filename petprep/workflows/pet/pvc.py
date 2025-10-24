@@ -87,7 +87,7 @@ def init_pet_pvc_wf(
 
     This workflow applies :abbr:`PVC (partial volume correction)` to the input
     :abbr:`PET (positron emission tomography)` image.
-    
+
     Workflow Graph
         .. workflow::
             :graph2use: orig
