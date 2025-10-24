@@ -192,9 +192,19 @@ registration (mri_robust_register) algorithm utilized settings optimized for PET
 scaling was enabled, automated sensitivity detection was activated, and the Frobenius norm threshold 
 for convergence was set at 0.0001, ensuring precise and consistent alignment across frames.
 
-To edit the motion correction parameters and run the workflow, use: ::
+By default, *PETPrep* evaluates the frames acquired after
+:option:`--hmc-start-time` and initializes motion correction with the
+frame exhibiting the highest tracer uptake. Provide a zero-based index
+with :option:`--hmc-init-frame` to override this choice. Adding
+:option:`--hmc-init-frame-fix` keeps whichever frame is selected (automatic or
+manual) fixed during robust template estimation to improve reproducibility.
+Iterations are automatically disabled to reduce runtime when :option:`--hmc-init-frame-fix` is
+used.
+
+Examples: ::
 
     $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
+    $ petprep /data/bids_root /out participant --hmc-init-frame 10 --hmc-init-frame-fix
 
 Segmentation
 ----------------
@@ -261,6 +271,12 @@ The available masks are and do not require ``--ref-mask-index`` to be specified:
 
 The presets are defined in ``petprep/data/reference_mask/config.json``.
 
+
+When a reference mask is created, *PETPrep* also generates a TSV table
+``label-<name>_desc-ref_morph.tsv`` saved under the ``anat/`` derivatives folder. This
+table mirrors the segmentation morph tables and contains three columns:
+``index``, ``name`` and ``volume-mm3``.
+
 If you want to use a custom mask, you can provide it using the ``--ref-mask-name`` and ``--ref-mask-index`` options,
 specifying the name and indices of your choice for a given segmentation (``--seg``). 
 
@@ -269,7 +285,7 @@ For example, to extract a mask of thalamus to use as a reference region, you can
     $ petprep /data/bids_root /out participant \
         --seg gtm --ref-mask-name thalamus --ref-mask-index 10 49
 
-The indices of the regions from a given segmentation can be found in the corresponding ``/anat/sub-<participant_label>_desc-<segmentation>_morph.tsv``.
+The indices of the regions from a given segmentation can be found in the corresponding ``/anat/sub-<participant_label>_seg-<segmentation>_morph.tsv``.
 
 Troubleshooting
 ---------------

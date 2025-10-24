@@ -205,8 +205,8 @@ def test_pvc_receives_segmentation(bids_root: Path):
 
         wf = init_pet_wf(pet_series=pet_series, precomputed={})
 
-    edge = wf._graph.get_edge_data(wf.get_node('pet_fit_wf'), wf.get_node('pet_pvc_wf'))
-    assert ('outputnode.segmentation', 'inputnode.segmentation') in edge['connect']
+    edge = wf._graph.get_edge_data(wf.get_node('inputnode'), wf.get_node('pet_pvc_wf'))
+    assert ('segmentation', 'inputnode.segmentation') in edge['connect']
 
 
 def test_pet_tacs_wf_connections(bids_root: Path):
@@ -226,9 +226,9 @@ def test_pet_tacs_wf_connections(bids_root: Path):
     edge_anat = wf._graph.get_edge_data(wf.get_node('pet_anat_wf'), wf.get_node('pet_tacs_wf'))
     assert ('outputnode.pet_file', 'inputnode.pet_anat') in edge_anat['connect']
 
-    edge_fit = wf._graph.get_edge_data(wf.get_node('pet_fit_wf'), wf.get_node('pet_tacs_wf'))
-    assert ('outputnode.segmentation', 'inputnode.segmentation') in edge_fit['connect']
-    assert ('outputnode.dseg_tsv', 'inputnode.dseg_tsv') in edge_fit['connect']
+    edge_input = wf._graph.get_edge_data(wf.get_node('inputnode'), wf.get_node('pet_tacs_wf'))
+    assert ('segmentation', 'inputnode.segmentation') in edge_input['connect']
+    assert ('dseg_tsv', 'inputnode.dseg_tsv') in edge_input['connect']
 
     edge_ds = wf._graph.get_edge_data(wf.get_node('pet_tacs_wf'), wf.get_node('ds_pet_tacs'))
     assert ('outputnode.timeseries', 'in_file') in edge_ds['connect']

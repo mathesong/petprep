@@ -5,7 +5,7 @@
     "refmask_indices": [47, 8], 
     "erode_by_voxels": 1,
     "exclude_indices": [7, 46, 172, 1007, 2007, 1009, 2009, 1011, 2011, 1013, 2013, 16], 
-    "dilate_by_voxels": 3,
+    "dilate_by_voxels": 2,
     "gm_prob_threshold": 0.8
     },
     "thalamus": 

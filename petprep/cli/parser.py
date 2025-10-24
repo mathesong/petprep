@@ -92,6 +92,10 @@ def _build_parser(**kwargs):
             raise parser.error("Argument can't be less than one.")
         return value
 
+    def _int_or_auto(value):
+        """Parse an integer value or the special 'auto' keyword."""
+        return 'auto' if value == 'auto' else int(value)
+
     def _to_gb(value):
         scale = {'G': 1, 'T': 10**3, 'M': 1e-3, 'K': 1e-6, 'B': 1e-9}
         digits = ''.join([c for c in value if c.isdigit()])
@@ -200,9 +204,8 @@ def _build_parser(**kwargs):
         metavar='FILE',
         help='A JSON file describing custom BIDS input filters using PyBIDS. '
         'For further details, please check out '
-        'https://petprep.readthedocs.io/en/%s/faq.html#'
-        'how-do-I-select-only-certain-files-to-be-input-to-PETPrep'
-        % (currentv.base_version if is_release else 'latest'),
+        f'https://petprep.readthedocs.io/en/{currentv.base_version if is_release else "latest"}/faq.html#'
+        'how-do-I-select-only-certain-files-to-be-input-to-PETPrep',
     )
     g_bids.add_argument(
         '-d',
@@ -323,7 +326,7 @@ def _build_parser(**kwargs):
         '--output-spaces',
         nargs='*',
         action=OutputReferencesAction,
-        help="""\
+        help=f"""\
 Standard and non-standard spaces to resample anatomical and PET images to. \
 Standard spaces may be specified by the form \
 ``<SPACE>[:cohort-<label>][:res-<resolution>][...]``, where ``<SPACE>`` is \
@@ -333,8 +336,7 @@ Non-standard spaces imply specific orientations and sampling grids. \
 Important to note, the ``res-*`` modifier does not define the resolution used for \
 the spatial normalization. To generate no PET outputs, use this option without specifying \
 any spatial references. For further details, please check out \
-https://petprep.readthedocs.io/en/%s/spaces.html"""
-        % (currentv.base_version if is_release else 'latest'),
+https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'latest'}/spaces.html""",
     )
     g_conf.add_argument(
         '--longitudinal',
@@ -496,19 +498,20 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         ' at https://surfer.nmr.mgh.harvard.edu/registration.html',
     )
     g_fs.add_argument(
+        '--no-submm-recon',
+        action='store_false',
+        dest='hires',
+        help='Disable sub-millimeter (hires) reconstruction',
+    )
+    fs_mutex = g_fs.add_mutually_exclusive_group()
+    fs_mutex.add_argument(
         '--fs-subjects-dir',
         metavar='PATH',
         type=Path,
         help='Path to existing FreeSurfer subjects directory to reuse. '
         '(default: OUTPUT_DIR/freesurfer)',
     )
-    g_fs.add_argument(
-        '--no-submm-recon',
-        action='store_false',
-        dest='hires',
-        help='Disable sub-millimeter (hires) reconstruction',
-    )
-    g_fs.add_argument(
+    fs_mutex.add_argument(
         '--fs-no-reconall',
         action='store_false',
         dest='run_reconall',
@@ -536,6 +539,24 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         default=120,
         type=float,
         help='Time (in seconds) after which head-motion estimation is performed.',
+    )
+    g_hmc.add_argument(
+        '--hmc-init-frame',
+        dest='hmc_init_frame',
+        nargs='?',
+        const='auto',
+        default='auto',
+        type=_int_or_auto,
+        help=(
+            "Initial frame index for head-motion estimation; omit or use 'auto' "
+            'to select the frame with highest uptake.'
+        ),
+    )
+    g_hmc.add_argument(
+        '--hmc-init-frame-fix',
+        dest='hmc_fix_frame',
+        action='store_true',
+        help=('Keep the chosen initial reference frame fixed during head-motion estimation.'),
     )
 
     g_seg = parser.add_argument_group('Segmentation options')
@@ -674,8 +695,8 @@ https://petprep.readthedocs.io/en/%s/spaces.html"""
         action='store_true',
         default=False,
         help='Opt-out of sending tracking information of this run to '
-        'the PETPREP developers. This information helps to '
-        'improve FMRIPREP and provides an indicator of real '
+        'the PETPrep developers. This information helps to '
+        'improve PETPrep and provides an indicator of real '
         'world usage crucial for obtaining funding.',
     )
     g_other.add_argument(
@@ -750,9 +771,9 @@ def parse_args(args=None, namespace=None):
     if not config.execution.notrack:
         import importlib.util
 
-        if importlib.util.find_spec('sentry_sdk') is None:
+        if importlib.util.find_spec('migas') is None:
             config.execution.notrack = True
-            config.loggers.cli.warning('Telemetry disabled because sentry_sdk is not installed.')
+            config.loggers.cli.warning('Telemetry disabled because migas is not installed.')
         else:
             config.loggers.cli.info(
                 'Telemetry system to collect crashes and errors is enabled '
@@ -842,11 +863,10 @@ applied."""
 
     # Ensure input and output folders are not the same
     if output_dir == bids_dir:
+        ver = version.split('+')[0]
         parser.error(
             'The selected output folder is the same as the input BIDS folder. '
-            'Please modify the output path (suggestion: {}).'.format(
-                bids_dir / 'derivatives' / f'petprep-{version.split("+")[0]}'
-            )
+            f'Please modify the output path (suggestion: {bids_dir / "derivatives" / f"petprep-{ver}"}).'
         )
 
     if bids_dir in work_dir.parents:
@@ -885,9 +905,7 @@ applied."""
     missing_subjects = participant_label - set(all_subjects)
     if missing_subjects:
         parser.error(
-            'One or more participant labels were not found in the BIDS directory: {}.'.format(
-                ', '.join(missing_subjects)
-            )
+            f'One or more participant labels were not found in the BIDS directory: {", ".join(missing_subjects)}.'
         )
 
     config.execution.participant_label = sorted(participant_label)

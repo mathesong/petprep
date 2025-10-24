@@ -1,30 +1,539 @@
-version: 2.1
+_setup_petprep_docker: &setup_petprep_docker
+  name: Install PETPrep's docker wrapper
+  command: |
+    pyenv local 3
+    pip install --upgrade pip
+    pip install --upgrade /tmp/src/petprep/wrapper/
 
+_check_outputs: &check_outputs
+  name: Check outputs of petprep run
+  command: |
+    set +e -x
+    mkdir -p /tmp/${DATASET}/test
+    find /tmp/${DATASET}/${SUBDIR:-petprep} \
+      \( -path '*/figures' -o -path '*/log' -o -path '*/sourcedata' \) \
+      -prune -o -name "*" -print | cut -d/ -f 5- | sort > /tmp/${DATASET}/test/outputs.out
+
+    FULL_OUTPUTS="${DATASET}${VARIANT}_outputs.txt"
+
+    echo "Checking full..."
+    sort /tmp/src/petprep/.circleci/${FULL_OUTPUTS} > /tmp/${DATASET}/test/full.out
+    diff /tmp/${DATASET}/test/{full,outputs}.out
+
+version: 2.1
+executors:
+  general:
+    machine:
+      image: default
+      docker_layer_caching: true
+    resource_class: large
+    working_directory: /tmp/src/petprep
+    environment:
+      TZ: "/usr/share/zoneinfo/America/Los_Angeles"
+      SCRATCH: "/scratch"
+  python:
+    docker:
+      - image: cimg/python:3.12
+    working_directory: /tmp/src/petprep
+aliases:
+- &src "/tmp/src/petprep"
 orbs:
-  conda: circleci/conda@1.1.1
+  docker: circleci/docker@2.1.4
+
+commands:
+  docker-auth:
+    description: Authenticate with DockerHub
+    steps:
+      - run: |
+          if [[ -n $DOCKER_PAT ]]; then
+            echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
+          fi
+  setup-docker-registry:
+    description: Set up Docker registry
+    steps:
+      - run: |
+          if [[ -f /tmp/images/registry.tar.gz ]]; then
+            echo "Loading saved registry image"
+            docker load < /tmp/images/registry.tar.gz
+          else
+            echo "Pulling registry image from DockerHub"
+            docker pull registry:2
+          fi
+          docker run -d -p 5000:5000 --restart=always --name=registry \
+              -v /tmp/docker:/var/lib/registry registry:2
+  pull-from-registry:
+    description: Pull and tag image from local registry
+    steps:
+      - run: |
+          docker pull localhost:5000/petprep
+          docker tag localhost:5000/petprep nipreps/petprep:latest
+  check-skip:
+    parameters:
+      check:
+        default: circle
+        type: string
+    steps:
+      - run:
+          name: Check commit message and determine if job should be skipped
+          command: |
+            set +e
+            cd /tmp/src/petprep
+            COMMIT_MSG="$(git show -s --format=%s)"
+            DOCBUILD="$(echo ${COMMIT_MSG} | grep -i -E '^docs?(\(\w+\))?:')"
+            SKIP_ALL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?circle\]')"
+            SKIP_LOCAL="$(echo ${COMMIT_MSG} | grep -i -E '\[skip[ _]?<<parameters.check>>\]')"
+
+            # no skipping if tagged build
+            if [[ -n "$CIRCLETAG" ]]; then
+              exit 0
+            elif [[ -n "$DOCSBUILD" ]]; then  # always try to skip docs builds
+              echo "Only docs build"
+              circleci step halt
+            elif [ -n "$SKIP_ALL" ]; then
+              echo "Skipping all"
+              circleci step halt
+            elif [ -n "$SKIP_LOCAL" ]; then
+              echo "Skipping <<parameters.check>>"
+              circleci step halt
+            fi
+            echo "No skip"
 
 jobs:
-  tests:
-    executor:
-      name: conda/default
+  build_clean:
+    executor: general
+    environment:
+      DOCKER_BUILDKIT: 1
     steps:
-      - checkout
-      - conda/update-env:
-          environment-file: env.yml
-          environment-name: petprep
-      - conda/run:
-          environment-name: petprep
+    - checkout:
+        path: *src
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - run:
+        name: Build Docker image
+        no_output_timeout: 60m
+        command: |
+          pyenv local 3
+          pip install hatch
+          # Get version, update files
+          THISVERSION=$( hatch version )
+          # Build docker image
+          docker build --rm \
+            --cache-from=nipreps/petprep \
+            -t nipreps/petprep:latest \
+            --platform linux/amd64 \
+            --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+            --build-arg VCS_REF=`git rev-parse --short HEAD` \
+            --build-arg VERSION="$THISVERSION" .
+
+  build:
+    executor: general
+    environment:
+      DOCKER_BUILDKIT: 1
+    steps:
+    - checkout:
+        path: *src
+    - check-skip
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        - build-v2--{{ .Revision }}
+        - build-v2-{{ .Branch }}-
+        - build-v2-master-
+        - build-v2-
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - run:
+        name: Get base image information
+        command: |
+          export BASE_IMAGE=$( grep BASE_IMAGE= Dockerfile | cut -d= -f2 )
+          export BASE_IMAGE_NAME=${BASE_IMAGE%:*}
+          export BASE_TAG=${BASE_IMAGE#*:}
+          echo "BASE_IMAGE=$BASE_IMAGE" >> $BASH_ENV
+          echo "BASE_IMAGE_NAME=$BASE_IMAGE_NAME" >> $BASH_ENV
+          echo "BASE_TAG=$BASE_TAG" >> $BASH_ENV
+          env
+    - run:
+        name: Build base image, if needed
+        command: |
+          if ! docker manifest inspect $BASE_IMAGE; then
+            docker buildx build --load \
+                --cache-from $BASE_IMAGE_NAME:latest \
+                -t $BASE_IMAGE \
+                --platform linux/amd64 \
+                -f Dockerfile.base .
+          fi
+    - run:
+        name: Build Docker image
+        no_output_timeout: 60m
+        command: |
+          pyenv local 3
+          pip install hatch
+          # Get version, update files.
+          THISVERSION=$( hatch version )
+          if [[ ${THISVERSION:0:1} == "0" ]] ; then
+            echo "WARNING: latest git tag could not be found"
+            echo "Please, make sure you fetch all tags from upstream with"
+            echo "the command ``git fetch --tags --verbose`` and push"
+            echo "them to your fork with ``git push origin --tags``"
+          fi
+          # Build docker image
+          docker buildx build --load \
+              --cache-from localhost:5000/petprep \
+              --cache-from nipreps/petprep:latest \
+              -t nipreps/petprep:latest \
+              --platform linux/amd64 \
+              --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+              --build-arg VCS_REF=`git rev-parse --short HEAD` \
+              --build-arg VERSION="${CIRCLE_TAG:-$THISVERSION}" .
+    - run:
+        command: docker images
+    - run:
+        name: Check Docker image
+        command: |
+          # Get version, update files.
+          THISVERSION=$( hatch version )
+          BUILT_VERSION=$( docker run --rm nipreps/petprep:latest --version )
+          BUILT_VERSION=${BUILT_VERSION%$'\r'}
+          BUILT_VERSION=${BUILT_VERSION#*"PETPrep v"}
+          echo "VERSION: \"$THISVERSION\""
+          echo "BUILT: \"$BUILT_VERSION\""
+          set -e
+          test "$BUILT_VERSION" = "$THISVERSION"
+    - run:
+        name: Docker push to local registry
+        no_output_timeout: 40m
+        command: |
+          docker tag nipreps/petprep:latest localhost:5000/petprep
+          docker push localhost:5000/petprep
+    - run:
+        name: Docker registry garbage collection
+        command: |
+          docker exec -it registry /bin/registry garbage-collect --delete-untagged \
+            /etc/docker/registry/config.yml
+
+    - persist_to_workspace:
+        root: /tmp
+        paths:
+        - src/petprep
+    - save_cache:
+        key: build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+
+  get_data:
+    executor: python
+    steps:
+      - run: |
+          uv self update
+          uv tool install git-annex
+          uv tool install --with-executables-from=datalad-osf,datalad-next datalad
+      - run: |
+          git ls-remote --exit-code https://gin.g-node.org/nipreps-data/ds004856.git HEAD > remote_stamp.txt
+      - run: |
+          git config --global user.name "CircleCI User"
+          git config --global user.email "email@domain.tld"
+      - restore_cache:
+          keys:
+          - data-v1-{{ checksum "remote_stamp.txt" }}
+          - data-v1-
+      - run:
+          name: Sync nipreps-data/ds004856.git
           command: |
-            pip install -e .[tests]
-            pytest -n auto --junitxml=test-results/junit.xml --cov=petprep --cov-report=xml
-      - store_test_results:
-          path: test-results
-      - store_artifacts:
-          path: coverage.xml
-          destination: coverage.xml
+            datalad install -r -s https://gin.g-node.org/nipreps-data/ds004856 /tmp/ds004856
+            datalad update -d /tmp/ds004856 --merge
+            datalad get -d /tmp/ds004856 -J4 \
+              /tmp/ds004856/sub-1023 \
+              /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer/sub-1023/{mri,surf,stats} \
+              /tmp/ds004856/derivatives/petprep/sub-1023
+      - save_cache:
+         key: data-v1-{{ checksum "remote_stamp.txt" }}
+         paths:
+            - /tmp/ds004856
+      - run:
+          name: Store FreeSurfer license file
+          command: |
+            mkdir -p /tmp/fslicense
+            cd /tmp/fslicense
+            echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IGxpY2Vuc2UudHh0Cg==" | base64 -d | sh
+      - run:
+          name: Create Nipype config files
+          command: |
+            mkdir -p /tmp/ds005
+            printf "[execution]\nstop_on_first_crash = true\n" > /tmp/ds005/nipype.cfg
+            echo "poll_sleep_duration = 0.01" >> /tmp/ds005/nipype.cfg
+            echo "hash_method = content" >> /tmp/ds005/nipype.cfg
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+          - fslicense
+          - ds005/nipype.cfg
+
+  test_ds004856:
+    executor: general
+    environment:
+      FS_LICENSE: /tmp/fslicense/license.txt
+      MIGAS_OPTOUT: 1
+      NO_ET: 1
+    steps:
+    - checkout:
+        path: *src
+    - check-skip:
+        check: ds004856
+    - attach_workspace:
+        at: /tmp
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - restore_cache:
+        keys:
+        - data-v1-
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run: *setup_petprep_docker
+    - run:
+        name: Install git-annex
+        command: |
+          command -v git-annex || pip install git-annex
+    - run:
+        name: Unlock files
+        command: |
+          git -C /tmp/ds004856/ annex unlock .
+    - run:
+        name: Run PETPrep with full precomputed derivatives
+        no_output_timeout: 2h
+        command: |
+          petprep-docker -i nipreps/petprep:latest \
+            /tmp/ds004856 /tmp/ds004856-petprep participant \
+            --fs-subjects-dir /tmp/ds004856/derivatives/petprep/sourcedata/freesurfer \
+            --fs-no-resume --derivatives petprep=/tmp/ds004856/derivatives/petprep \
+            --output-spaces MNI152NLin2009cAsym \
+            --no-msm
+
+  test_pytest:
+    executor: general
+    steps:
+    - checkout:
+        path: *src
+    - check-skip:
+        check: tests
+    - attach_workspace:
+        at: /tmp
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - restore_cache:
+        keys:
+        - data-v1-
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run:
+        name: Run PETPrep tests
+        no_output_timeout: 2h
+        command: |
+          docker run -ti --rm=false \
+            -e TEST_READONLY_FILESYSTEM=1 -v $HOME:/home/readonly:ro \
+            --entrypoint="pytest" nipreps/petprep:latest \
+            --pyargs petprep -svx --doctest-modules
+
+    - run:
+        name: Build petprep-docker wheel
+        command: |
+          pyenv local 3
+          pip install --upgrade pip build
+          python -m build wrapper/
+    - run:
+        name: Install and test petprep-docker (Python 3)
+        command: |
+          echo -n "Python version: "
+          python --version
+          pip install --upgrade wrapper/
+          pip install wrapper/dist/*.whl
+          which petprep-docker
+          petprep-docker -i nipreps/petprep:latest --help
+          petprep-docker -i nipreps/petprep:latest --version
+    - run:
+        name: Install and test petprep-docker (Python 2)
+        command: |
+          pyenv local 2.7
+          echo -n "Python version: "
+          python --version
+          pip install --upgrade "pip<21"
+          pip install wrapper/dist/*.whl
+          which petprep-docker
+          petprep-docker -i nipreps/petprep:latest --help
+          petprep-docker -i nipreps/petprep:latest --version
+    - store_artifacts:
+        path: /tmp/data/reports
+
+  deploy_docker_patches:
+    executor: general
+    working_directory: *src
+    steps:
+    - run:
+        name: Check whether image should be deployed to Docker Hub
+        command: |
+          if [[ "$CIRCLE_PROJECT_USERNAME" != "nipreps" ]]; then
+            echo "Nothing to deploy for $CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME."
+            circleci step halt
+          fi
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run:
+        name: Deploy to Docker Hub
+        no_output_timeout: 40m
+        command: |
+          # Format: docker/[<version-like>+]<tag> -> nipreps/petprep:<tag>
+          # <version-like>+<tag> guides setuptools_scm to get the right major/minor
+          docker tag nipreps/petprep nipreps/petprep:${CIRCLE_BRANCH##*[/+]}
+          docker push nipreps/petprep:${CIRCLE_BRANCH##*[/+]}
+
+  deploy_docker:
+    executor: general
+    steps:
+    - checkout:
+        path: *src
+    - check-skip
+    - restore_cache:
+        keys:
+        - build-v2-{{ .Branch }}-{{ .Revision }}
+        paths:
+        - /tmp/docker
+        - /tmp/images
+    - docker/install-docker-credential-helper
+    - docker-auth
+    - setup-docker-registry
+    - pull-from-registry
+    - run:
+        name: Deploy to Docker Hub
+        no_output_timeout: 40m
+        command: |
+          if [[ -n "$DOCKER_PAT" ]]; then
+            echo "$DOCKER_PAT" | docker login -u $DOCKER_USER --password-stdin
+            docker tag nipreps/petprep nipreps/petprep:unstable
+            docker push nipreps/petprep:unstable
+            if [[ -n "$CIRCLE_TAG" ]]; then
+              docker push nipreps/petprep:latest
+              docker tag nipreps/petprep nipreps/petprep:$CIRCLE_TAG
+              docker push nipreps/petprep:$CIRCLE_TAG
+            fi
+          fi
+
+  deployable:
+    docker:
+    - image: busybox:latest
+    steps:
+    - run: echo Deploying!
 
 workflows:
   version: 2
-  test:
+  build_from_scratch:
+    triggers:
+    - schedule:
+        cron: "0 13 * * 1"
+        filters:
+          branches:
+            only:
+            - master
+            - maint/20.2.x
     jobs:
-      - tests
+    - build_clean:
+        context:
+        - nipreps-common
+
+  build_test_deploy:
+    jobs:
+    - build:
+        context:
+        - nipreps-common
+        filters:
+          branches:
+            ignore:
+            - /docs?\/.*/
+          tags:
+            only: /.*/
+
+    - get_data:
+        filters:
+          branches:
+            ignore:
+            - /docs?\/.*/
+            - /tests?\/.*/
+            - /docker\/.*/
+          tags:
+            only: /.*/
+
+    - test_ds004856:
+        context:
+        - nipreps-common
+        requires:
+        - build
+        - get_data
+        filters:
+          tags:
+            only: /.*/
+
+    - test_pytest:
+        context:
+        - nipreps-common
+        requires:
+        - build
+        filters:
+          branches:
+            ignore:
+            - /docs?\/.*/
+            - /docker\/.*/
+          tags:
+            only: /.*/
+
+    - deploy_docker_patches:
+        context:
+        - nipreps-common
+        requires:
+        - build
+        filters:
+          branches:
+            only: /docker\/.*/
+
+    - deployable:
+        requires:
+        - test_pytest
+        - test_ds004856
+        filters:
+          branches:
+            only: main
+          tags:
+            only: /.*/
+
+    - deploy_docker:
+        context:
+        - nipreps-common
+        requires:
+        - deployable
+        filters:
+          branches:
+            only: main
+          tags:
+            only: /.*/

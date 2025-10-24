@@ -27,6 +27,13 @@ from nipype.interfaces.freesurfer.base import FSCommand, FSTraitedSpec
 from nipype.interfaces.freesurfer.petsurfer import GTMSeg
 from nipype.utils.filemanip import fname_presuffix
 
+from .. import config
+
+
+def _set_freesurfer_seed(runtime):
+    runtime.environ['FREESURFER_RANDOM_SEED'] = str(config.seeds.freesurfer)
+    return runtime
+
 
 class SegmentBSInputSpec(BaseInterfaceInputSpec):
     subjects_dir = Directory(exists=True, mandatory=True, desc='FreeSurfer subjects directory')
@@ -143,6 +150,7 @@ class MRISclimbicSeg(CommandLine):
     output_spec = MRISclimbicSegOutputSpec
 
     def _run_interface(self, runtime):
+        _set_freesurfer_seed(runtime)
         outputs = self._list_outputs()
         expected = [outputs['out_file'], outputs['out_stats']]
 
@@ -186,6 +194,7 @@ class SegmentHA_T1(FSCommand):
     output_spec = SegmentHA_T1OutputSpec
 
     def _run_interface(self, runtime):
+        _set_freesurfer_seed(runtime)
         fs_path = os.path.join(self.inputs.subjects_dir, self.inputs.subject_id, 'mri')
         expected = [
             'lh.hippoAmygLabels-T1.v22.FSvoxelSpace.mgz',
@@ -324,6 +333,7 @@ class SegmentGTM(GTMSeg):
     """Run ``gtmseg`` unless outputs already exist."""
 
     def _run_interface(self, runtime):
+        _set_freesurfer_seed(runtime)
         subj_dir = Path(self.inputs.subjects_dir) / self.inputs.subject_id
         seg_file = subj_dir / 'mri' / self.inputs.out_file
         stats_file = subj_dir / 'stats' / Path(self.inputs.out_file).with_suffix('.stats').name
@@ -562,6 +572,10 @@ class SegStats(FSCommand):
                 else:
                     outputs[name] = os.path.abspath(value)
         return outputs
+
+    def _run_interface(self, runtime):
+        _set_freesurfer_seed(runtime)
+        return super()._run_interface(runtime)
 
     def _format_arg(self, name, spec, value):
         if name in ('summary_file', 'ctab_out_file', 'avgwf_txt_file'):

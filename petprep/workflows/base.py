@@ -81,7 +81,7 @@ def init_petprep_wf():
                 spaces=config.workflow.spaces.get_fs_spaces(),
                 minimum_fs_version='7.0.0',
             ),
-            name='fsdir_run_{}'.format(config.execution.run_uuid.replace('-', '_')),
+            name=f'fsdir_run_{config.execution.run_uuid.replace("-", "_")}',
             run_without_submitting=True,
         )
         if config.execution.fs_subjects_dir is not None:
@@ -164,6 +164,7 @@ def init_single_subject_wf(subject_id: str):
     )
 
     from petprep.workflows.pet.base import init_pet_wf
+    from petprep.workflows.pet.segmentation import init_segmentation_wf
 
     workflow = Workflow(name=f'sub_{subject_id}_wf')
     workflow.__desc__ = f"""
@@ -328,7 +329,7 @@ It is released under the [CC0]\
     # allow to run with anat-fast-track on PET-only dataset
     if 't1w_preproc' in anatomical_cache and not subject_data['t1w']:
         config.loggers.workflow.debug(
-            'No T1w image found; using precomputed T1w image: %s', anatomical_cache['t1w_preproc']
+            f'No T1w image found; using precomputed T1w image: {anatomical_cache["t1w_preproc"]}'
         )
         workflow.connect([
             (bidssrc, bids_info, [(('pet', fix_multi_T1w_source_name), 'in_file')]),
@@ -523,6 +524,24 @@ It is released under the [CC0]\
                 ]),
             ])  # fmt:skip
 
+    segmentation_wf = init_segmentation_wf(
+        seg=config.workflow.seg,
+        name=f'pet_{config.workflow.seg}_seg_wf',
+    )
+    workflow.connect(
+        [
+            (
+                anat_fit_wf,
+                segmentation_wf,
+                [
+                    ('outputnode.t1w_preproc', 'inputnode.t1w_preproc'),
+                    ('outputnode.subjects_dir', 'inputnode.subjects_dir'),
+                    ('outputnode.subject_id', 'inputnode.subject_id'),
+                ],
+            ),
+        ]
+    )
+
     if config.workflow.anat_only:
         return clean_datasinks(workflow)
 
@@ -599,6 +618,10 @@ segmented with the ``{config.workflow.seg}`` segmentation workflow from FreeSurf
                     f'outputnode.sphere_reg_{"msm" if msm_sulc else "fsLR"}',
                     'inputnode.sphere_reg_fsLR',
                 ),
+            ]),
+            (segmentation_wf, pet_wf, [
+                ('outputnode.segmentation', 'inputnode.segmentation'),
+                ('outputnode.dseg_tsv', 'inputnode.dseg_tsv'),
             ]),
         ])  # fmt:skip
 

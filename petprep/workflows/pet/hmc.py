@@ -100,6 +100,14 @@ def lta_list(in_file):
     return lta_list
 
 
+def _find_highest_uptake_frame(in_files: list[str]) -> int:
+    import nibabel as nb
+    import numpy as np
+
+    uptake = [np.sum(nb.load(f).get_fdata(dtype=np.float32)) for f in in_files]
+    return int(np.argmax(uptake)) + 1
+
+
 class _LTAList2ITKInputSpec(BaseInterfaceInputSpec):
     in_xforms = InputMultiObject(File(exists=True), mandatory=True)
     in_reference = File(exists=True, mandatory=True)
@@ -139,6 +147,8 @@ def init_pet_hmc_wf(
     start_time: float = 120.0,
     frame_durations: Sequence[float] | None = None,
     frame_start_times: Sequence[float] | None = None,
+    initial_frame: int | str | None = 'auto',
+    fixed_frame: bool = False,
     name: str = 'pet_hmc_wf',
 ):
     r"""
@@ -177,6 +187,15 @@ def init_pet_hmc_wf(
     frame_start_times : :class:`~typing.Sequence`\[:obj:`float`] or ``None``
         Optional list of frame onset times used together with
         ``frame_durations`` to locate the start frame.
+    initial_frame : :obj:`int`, ``'auto'`` or ``None``
+        0-based index of the frame used to initialize motion correction. If ``'auto'`` or
+        ``None`` (default), the frame with the highest uptake is selected automatically.
+        FreeSurfer's ``initial_timepoint`` is 1-based; this workflow applies the
+        required offset internally.
+    fixed_frame : :obj:`bool`
+        Whether to keep the initial time point fixed during robust template
+        estimation (``fs.RobustTemplate``'s ``fixtp`` parameter). If ``True``,
+        iterations are skipped to reduce runtime.
     name : :obj:`str`
         Name of workflow (default: ``pet_hmc_wf``)
 
@@ -252,7 +271,9 @@ FreeSurfer's ``mri_robust_template``.
         name='smooth',
         iterfield=['in_file'],
     )
-    thresh = pe.MapNode(fsl.maths.Threshold(thresh=20), name='thresh', iterfield=['in_file'])
+    thresh = pe.MapNode(
+        fsl.maths.Threshold(thresh=20, use_robust_range=True), name='thresh', iterfield=['in_file']
+    )
 
     # Select reference frame
     start_frame = pe.Node(
@@ -274,6 +295,17 @@ FreeSurfer's ``mri_robust_template``.
         name='create_lta_list',
     )
 
+    auto_init_frame = initial_frame in (None, 'auto')
+    if auto_init_frame:
+        find_highest_uptake_frame = pe.Node(
+            niu.Function(
+                input_names=['in_files'],
+                output_names=['index'],
+                function=_find_highest_uptake_frame,
+            ),
+            name='find_highest_uptake_frame',
+        )
+
     # Motion estimation
     robust_template = pe.Node(
         fs.RobustTemplate(
@@ -282,9 +314,13 @@ FreeSurfer's ``mri_robust_template``.
             average_metric='mean',
             args='--cras',
             num_threads=omp_nthreads,
+            fixed_timepoint=fixed_frame,
+            no_iteration=fixed_frame,
         ),
         name='est_robust_hmc',
     )
+    if not auto_init_frame:
+        robust_template.inputs.initial_timepoint = int(initial_frame) + 1
     upd_xfm = pe.Node(
         niu.Function(
             input_names=['xforms', 'idx'],
@@ -323,5 +359,13 @@ FreeSurfer's ``mri_robust_template``.
         (robust_template, ref_to_nii, [('out_file', 'in_file')]),
         (ref_to_nii, outputnode, [('out_file', 'petref')]),
     ])  # fmt:skip
+
+    if auto_init_frame:
+        workflow.connect(
+            [
+                (thresh, find_highest_uptake_frame, [('out_file', 'in_files')]),
+                (find_highest_uptake_frame, robust_template, [('index', 'initial_timepoint')]),
+            ]
+        )
 
     return workflow

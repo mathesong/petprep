@@ -198,7 +198,7 @@ try:
             if _proc_oc_kbytes.exists():
                 _oc_limit = _proc_oc_kbytes.read_text().strip()
             if _oc_limit in ('0', 'n/a') and Path('/proc/sys/vm/overcommit_ratio').exists():
-                _oc_limit = '{}%'.format(Path('/proc/sys/vm/overcommit_ratio').read_text().strip())
+                _oc_limit = f'{Path("/proc/sys/vm/overcommit_ratio").read_text().strip()}%'
 except Exception:  # noqa: S110, BLE001
     pass
 
@@ -596,6 +596,10 @@ class workflow(_Config):
     """FWHM for Gaussian smoothing prior to head-motion estimation."""
     hmc_start_time: float = 120.0
     """Time point (in seconds) at which head-motion estimation starts."""
+    hmc_init_frame: int | str | None = 'auto'
+    """Index of initial frame for head-motion estimation ('auto' selects highest uptake)."""
+    hmc_fix_frame: bool = False
+    """Whether to fix the reference frame during head-motion estimation."""
     seg = 'gtm'
     """Segmentation approach ('gtm', 'brainstem', 'thalamicNuclei',
     'hippocampusAmygdala', 'wm', 'raphe', 'limbic')."""
@@ -667,6 +671,8 @@ class seeds(_Config):
     """Seed used for antsRegistration, antsAI, antsMotionCorr"""
     numpy = None
     """Seed used by NumPy"""
+    freesurfer = None
+    """Seed used by FreeSurfer utilities"""
 
     @classmethod
     def init(cls):
@@ -678,6 +684,7 @@ class seeds(_Config):
         # functions to set program specific seeds
         cls.ants = _set_ants_seed()
         cls.numpy = _set_numpy_seed()
+        cls.freesurfer = _set_freesurfer_seed()
 
 
 def _set_ants_seed():
@@ -693,6 +700,13 @@ def _set_numpy_seed():
 
     val = random.randint(1, 65536)
     np.random.seed(val)
+    return val
+
+
+def _set_freesurfer_seed():
+    """Fix random seed for FreeSurfer utilities"""
+    val = random.randint(1, 65536)
+    os.environ['FREESURFER_RANDOM_SEED'] = str(val)
     return val
 
 
