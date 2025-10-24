@@ -152,11 +152,11 @@ class CSVtoNiftiOutputSpec(TraitedSpec):
 
 class CSVtoNifti(BaseInterface):
     """Convert a CSV file with region means to a NIfTI image using a reference segmentation.
-    
+
     Args:
         BaseInterface: Base interface class for all Nipype interfaces.
     """
-    
+
     input_spec = CSVtoNiftiInputSpec
     output_spec = CSVtoNiftiOutputSpec
 
@@ -628,7 +628,7 @@ class GTMStatsTo4DNifti(BaseInterface):
     Args:
         BaseInterface (_type_): _description_
     """
-    
+
     input_spec = GTMStatsTo4DNiftiInputSpec
     output_spec = GTMStatsTo4DNiftiOutputSpec
 
