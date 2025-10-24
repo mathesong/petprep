@@ -596,13 +596,53 @@ Calculated confounds include the mean global signal, mean tissue class signal,
 tCompCor, aCompCor, Frame-wise Displacement, 6 motion parameters, DVARS, and
 spike regressors.
 
+Partial volume correction
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+:py:func:`~petprep.workflows.pet.pvc.init_pet_pvc_wf`
+
+.. workflow::
+    :graph2use: colored
+    :simple_form: yes
+
+    from petprep.workflows.tests import mock_config
+    from petprep.workflows.pet.pvc import init_pet_pvc_wf
+
+    with mock_config():
+        wf = init_pet_pvc_wf(
+            name="pvc_wf",
+            tool="PETPVC",
+            method="GTM"
+        )
+
+Partial volume correction (PVC) is a process that attempts to correct for the partial 
+volume effects that occur when a single voxel contains multiple tissue types. This is 
+particularly important in PET imaging, where the signal from different tissues (e.g., 
+gray matter, white matter, and cerebrospinal fluid) can overlap within a voxel, 
+leading to inaccurate quantification of tracer uptake.
+
+*PETPrep* provides a PVC workflow using established tools such as `PETPVC` [Thomas2016]_ or 
+`PETsurfer` [Greve2014]_ [Greve2016]_. `PETPVC` provides methods such as ``GTM``, ``LABBE``, ``RL``, ``VC``, 
+``RBV``, ``LABBE+RBV``, ``RBV+VC``, ``RBV+RL``, ``LABBE+RBV+VC``, ``LABBE+RBV+RL``,
+``STC``, ``MTC``, ``LABBE+MTC``, ``MTC+VC``, ``MTC+RL``, ``LABBE+MTC+VC``,
+``LABBE+MTC+RL``, ``IY``, ``IY+VC``, ``IY+RL``, ``MG``, ``MG+VC`` and ``MG+RL``.
+`PETsurfer` provides ``GTM``, ``MG``, ``RBV`` and ``AGTM``.
+
 References
 ----------
-
-.. [Power2017] Power JD, Plitt M, Kundu P, Bandettini PA, Martin A (2017) Temporal interpolation alters
-    motion in fMRI scans: Magnitudes and consequences for artifact detection. PLOS ONE 12(9): e0182939.
-    doi:`10.1371/journal.pone.0182939 <https://doi.org/10.1371/journal.pone.0182939>`_.
 
 .. [Brett2001] Brett M, Leff AP, Rorden C, Ashburner J (2001) Spatial Normalization of Brain Images with
     Focal Lesions Using Cost Function Masking. NeuroImage 14(2)
     doi:`10.006/nimg.2001.0845 <https://doi.org/10.1006/nimg.2001.0845>`_.
+
+.. [Thomas2016]  Thomas, B. A., Cuplov, V., Bousse, A., Mendes, A., Thielemans, K., Hutton, B. F., & 
+    Erlandsson, K. (2016). PETPVC: a toolbox for performing partial volume correction techniques in positron 
+    emission tomography. Physics in Medicine & Biology, 61(22), 7975.
+
+.. [Greve2014] Greve, D. N., Svarer, C., Fisher, P. M., Feng, L., Hansen, A. E., Baare, W., ... & 
+    Knudsen, G. M. (2014). Cortical surface-based analysis reduces bias and variance in kinetic modeling 
+    of brain PET data. Neuroimage, 92, 225-236.
+
+.. [Greve2016] Greve, D. N., Salat, D. H., Bowen, S. L., Izquierdo-Garcia, D., Schultz, A. P., 
+    Catana, C., ... & Johnson, K. A. (2016). Different partial volume correction methods lead to different 
+    conclusions: An 18 F-FDG-PET study of aging. NeuroImage, 132, 334-343.
