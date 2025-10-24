@@ -8,8 +8,6 @@ def test_dvars_connects_pet_mask(tmp_path):
     """Check dvars node connection and execution."""
     wf = init_pet_confs_wf(
         mem_gb=0.01,
-        metadata={},
-        regressors_all_comps=False,
         regressors_dvars_th=1.5,
         regressors_fd_th=0.5,
     )

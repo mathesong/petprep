@@ -32,13 +32,13 @@ Therefore, once specified the container options and the image to be run
 the command line is the same as for the *bare-metal* installation but dropping
 the ``petprep`` executable name.
 
-Containerized execution (Docker and Singularity)
+Containerized execution (Docker and Apptainer)
 ================================================
 *PETPrep* is a *NiPreps* application, and therefore follows some overarching principles
 of containerized execution drawn from the BIDS-Apps protocols.
 For detailed information of containerized execution of *NiPreps*, please visit the corresponding
 `Docker <https://www.nipreps.org/apps/docker/>`__
-or `Singularity <https://www.nipreps.org/apps/singularity/>`__ subsections.
+or `Apptainer / Singularity <https://www.nipreps.org/apps/singularity/>`__ subsections.
 The *NiPreps* portal also contains
 `extended details of execution with the Docker wrapper <https://www.nipreps.org/apps/docker/#running-a-niprep-with-a-lightweight-wrapper>`__.
 
@@ -46,10 +46,37 @@ In short, install the ``petprep-docker`` wrapper with pip::
 
   $ python -m pip install petprep-docker
 
+Warning - since petprep relies on many tools (see below Dependencies), you need about 30 Gb free space (the image is 24GB -- also beware of docker settings which by default will not use the last 10% of your disk space).
+
 Then run the ``petprep-docker`` command-line as if you were running
 ``petprep`` on a *bare-metal* installation::
 
   $ petprep-docker <input_bids_path> <derivatives_path> <analysis_level> <named_options>
+
+Alternatively, you can install using a pre-built image using either::
+
+  $ docker pull ghcr.io/nipreps/petprep:main
+
+or if on linux/amd64::
+ 
+  $ docker pull --platform=linux/amd64 ghcr.io/nipreps/petprep:main
+
+or using apptainer::
+
+  $ apptainer build petprep.sif docker://ghcr.io/nipreps/petprep:main
+
+(Find latest on: https://github.com/nipreps/petprep/pkgs/container/petprep)
+
+Then run petprep via apptainer as follows::
+
+  $ apptainer run \
+   --bind /path_to_data:/data:ro \
+   --bind /path_to_output:/out \
+   --bind /path_to_freesurfer/license.txt:/license \
+   /path_to_sif/petprep.sif /data /out participant or group \
+   --participant-label sub-ID \
+   --fs-license-file /license \
+   --work-dir /out/work
 
 
 Manually Prepared Environment (Python 3.10+)

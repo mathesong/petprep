@@ -13,7 +13,7 @@ from niworkflows.utils.bids import collect_data as original_collect_data
 from niworkflows.utils.testing import generate_bids_skeleton
 
 from ... import config
-from ..base import init_petprep_wf
+from ..base import init_petprep_wf, init_single_subject_wf
 from ..tests import mock_config
 
 BASE_LAYOUT = {
@@ -94,6 +94,53 @@ def bids_root(tmp_path_factory):
         events_path.write_text('onset\tduration\ttrial_type\n')
 
     return bids_dir
+
+
+@pytest.fixture(scope='module')
+def multisession_bids_root(tmp_path_factory):
+    base = tmp_path_factory.mktemp('multisession')
+    bids_dir = base / 'bids'
+    bids_dir.mkdir(parents=True, exist_ok=True)
+    img = nb.Nifti1Image(np.zeros((10, 10, 10, 10)), np.eye(4))
+    (bids_dir / 'dataset_description.json').write_text('{"Name": "Test", "BIDSVersion": "1.8.0"}')
+    for ses in ['01', '02']:
+        anat_dir = bids_dir / 'sub-01' / f'ses-{ses}' / 'anat'
+        pet_dir = bids_dir / 'sub-01' / f'ses-{ses}' / 'pet'
+        anat_dir.mkdir(parents=True, exist_ok=True)
+        pet_dir.mkdir(parents=True, exist_ok=True)
+        img.to_filename(anat_dir / f'sub-01_ses-{ses}_T1w.nii.gz')
+        pet_path = pet_dir / f'sub-01_ses-{ses}_task-rest_run-1_pet.nii.gz'
+        img.to_filename(pet_path)
+        (pet_path.with_suffix('').with_suffix('.json')).write_text(
+            '{"FrameTimesStart": [0], "FrameDuration": [1]}'
+        )
+    return bids_dir
+
+
+def test_segmentation_shared_across_runs(multisession_bids_root):
+    with mock_config(bids_dir=multisession_bids_root):
+        wf = init_single_subject_wf('01')
+    flatgraph = wf._create_flat_graph()
+    generate_expanded_graph(flatgraph)
+
+    seg_wf_name = f'pet_{config.workflow.seg}_seg_wf'
+    seg_nodes = [n for n in wf.list_node_names() if n.startswith(seg_wf_name)]
+    assert seg_nodes
+
+    pet_wf_names = [
+        n
+        for n in {name.split('.')[0] for name in wf.list_node_names() if name.startswith('pet_')}
+        if n != seg_wf_name
+    ]
+    assert len(pet_wf_names) == 2
+
+    seg_node = wf.get_node(seg_wf_name)
+    for name in pet_wf_names:
+        pet_node = wf.get_node(name)
+        edge = wf._graph.get_edge_data(seg_node, pet_node)
+        assert ('outputnode.segmentation', 'inputnode.segmentation') in edge['connect']
+        assert ('outputnode.dseg_tsv', 'inputnode.dseg_tsv') in edge['connect']
+        assert all('_seg_wf' not in n for n in pet_node.list_node_names())
 
 
 def _make_params(

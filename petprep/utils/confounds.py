@@ -89,7 +89,7 @@ def acompcor_masks(in_files, is_aseg=False, zooms=None):
     believe that they always operated slice-wise given the large slice-thickness of
     their functional data.
 
-    Instead, *fMRIPrep*'s implementation deviates from Behzadi's implementation on two
+    Instead, *PETPrep*'s implementation deviates from Behzadi's implementation on two
     aspects:
 
       * the masks are prepared in high-resolution, anatomical space and then

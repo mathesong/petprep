@@ -391,8 +391,13 @@ parameters for each time-step are passed on to the
 
 The smoothing kernel width and onset of motion estimation can be
 customized via the :option:`--hmc-fwhm` and :option:`--hmc-start-time`
-command line options.  By default a 10 mm FWHM Gaussian is applied and
-estimation begins at 120 s.
+command line options. By default, PETPrep initializes registration with
+the frame showing the highest tracer uptake after this start time. An
+explicit zero-based frame index can be provided with
+:option:`--hmc-init-frame`. Adding :option:`--hmc-init-frame-fix` keeps the chosen
+frame fixed during robust template estimation and disables iterations to
+reduce runtime. A 10 mm FWHM Gaussian is applied and estimation begins at
+120 s unless otherwise specified.
 
 Pre-processed PET in native space
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -554,6 +559,10 @@ sufficient disk space is available. Each segmentation produces a labeled NIfTI
 image ``seg-<seg>_dseg.nii.gz`` and a TSV table of region volumes
 ``seg-<seg>_morph.tsv`` saved under the ``anat/`` derivatives folder.
 
+Reference masks generated via ``--ref-mask-name`` create a similar
+``label-<name>_desc-ref_morph.tsv`` file. These TSVs share the same columns as the
+segmentation morph tables: ``index``, ``name`` and ``volume-mm3``.
+
 For example, the raphe segmentation can be enabled with::
 
    petprep run /data/bids /data/out --seg raphe
@@ -575,11 +584,6 @@ Confounds estimation
     wf = init_pet_confs_wf(
         name="discover_wf",
         mem_gb=1,
-        metadata={
-            "FrameTimesStart": [0, 2, 4, 6],
-            "FrameDuration": [2, 2, 2, 2],
-        },
-        regressors_all_comps=False,
         regressors_dvars_th=1.5,
         regressors_fd_th=0.5,
     )

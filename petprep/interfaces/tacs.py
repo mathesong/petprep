@@ -49,7 +49,7 @@ class ExtractTACs(SimpleInterface):
         if len(frame_times) != len(frame_durations):
             raise ValueError('FrameTimesStart and FrameDuration must have equal length')
 
-        segmentation_data = nb.load(self.inputs.segmentation).get_fdata().astype(int)
+        segmentation_data = np.rint(nb.load(self.inputs.segmentation).get_fdata()).astype(int)
         pet_data = pet_img.get_fdata()
 
         unique_labels = np.unique(segmentation_data)
@@ -75,12 +75,12 @@ class ExtractTACs(SimpleInterface):
 
         frame_times_end = np.add(frame_times, frame_durations).tolist()
         df = pd.DataFrame(curves)
-        df.insert(0, 'FrameTimesEnd', frame_times_end)
-        df.insert(0, 'FrameTimesStart', list(frame_times))
+        df.insert(0, 'frame_end', frame_times_end)
+        df.insert(0, 'frame_start', list(frame_times))
 
         out_file = fname_presuffix(
             self.inputs.in_file,
-            suffix='_timeseries.tsv',
+            suffix='_tacs.tsv',
             newpath=runtime.cwd,
             use_ext=False,
         )
@@ -113,7 +113,7 @@ class ExtractRefTAC(SimpleInterface):
         if pet_img.ndim == 3:
             pet_data = pet_data[..., np.newaxis]
 
-        mask = nb.load(self.inputs.mask_file).get_fdata() > 0
+        mask = np.rint(nb.load(self.inputs.mask_file).get_fdata()).astype(np.int16) > 0
 
         with open(self.inputs.metadata) as f:
             metadata = json.load(f)
@@ -133,12 +133,12 @@ class ExtractRefTAC(SimpleInterface):
         timeseries = pet_data[mask, :].mean(axis=0)
         frame_times_end = np.add(frame_times, frame_durations).tolist()
         df = pd.DataFrame({self.inputs.ref_mask_name: timeseries})
-        df.insert(0, 'FrameTimesEnd', frame_times_end)
-        df.insert(0, 'FrameTimesStart', list(frame_times))
+        df.insert(0, 'frame_end', frame_times_end)
+        df.insert(0, 'frame_start', list(frame_times))
 
         out_file = fname_presuffix(
             self.inputs.in_file,
-            suffix='_timeseries.tsv',
+            suffix='_tacs.tsv',
             newpath=runtime.cwd,
             use_ext=False,
         )

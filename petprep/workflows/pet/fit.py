@@ -25,6 +25,7 @@ from pathlib import Path
 import nibabel as nb
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
+from nitransforms.linear import Affine
 from niworkflows.interfaces.header import ValidateImage
 from niworkflows.utils.connections import listify
 
@@ -50,7 +51,6 @@ from .outputs import (
 from .ref_tacs import init_pet_ref_tacs_wf
 from .reference_mask import init_pet_refmask_wf
 from .registration import init_pet_reg_wf
-from .segmentation import init_segmentation_wf
 
 
 def init_pet_fit_wf(
@@ -68,9 +68,9 @@ def init_pet_fit_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.tests import mock_config
-            from fmriprep import config
-            from fmriprep.workflows.pet.fit import init_pet_fit_wf
+            from petprep.workflows.tests import mock_config
+            from petprep import config
+            from petprep.workflows.pet.fit import init_pet_fit_wf
             with mock_config():
                 pet_file = config.execution.bids_dir / "sub-01" / "func" \
                     / "sub-01_task-mixedgamblestask_run-01_pet.nii.gz"
@@ -102,6 +102,10 @@ def init_pet_fit_wf(
         FreeSurfer subject ID
     fsnative2t1w_xfm
         LTA-style affine matrix translating from FreeSurfer-conformed subject space to T1w
+    segmentation
+        Segmentation file in T1w space
+    dseg_tsv
+        TSV with segmentation statistics
 
     Outputs
     -------
@@ -119,11 +123,11 @@ def init_pet_fit_wf(
     See Also
     --------
 
-    * :py:func:`~fmriprep.workflows.pet.hmc.init_pet_hmc_wf`
-    * :py:func:`~fmriprep.workflows.pet.registration.init_pet_reg_wf`
-    * :py:func:`~fmriprep.workflows.pet.outputs.init_ds_petref_wf`
-    * :py:func:`~fmriprep.workflows.pet.outputs.init_ds_hmc_wf`
-    * :py:func:`~fmriprep.workflows.pet.outputs.init_ds_registration_wf`
+    * :py:func:`~petprep.workflows.pet.hmc.init_pet_hmc_wf`
+    * :py:func:`~petprep.workflows.pet.registration.init_pet_reg_wf`
+    * :py:func:`~petprep.workflows.pet.outputs.init_ds_petref_wf`
+    * :py:func:`~petprep.workflows.pet.outputs.init_ds_hmc_wf`
+    * :py:func:`~petprep.workflows.pet.outputs.init_ds_registration_wf`
 
     """
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
@@ -168,6 +172,8 @@ def init_pet_fit_wf(
                 'subjects_dir',
                 'subject_id',
                 'fsnative2t1w_xfm',
+                'segmentation',
+                'dseg_tsv',
             ],
         ),
         name='inputnode',
@@ -181,8 +187,6 @@ def init_pet_fit_wf(
                 'pet_mask',
                 'motion_xfm',
                 'petref2anat_xfm',
-                'segmentation',
-                'dseg_tsv',
                 'refmask',
             ],
         ),
@@ -198,12 +202,18 @@ def init_pet_fit_wf(
     )
     hmc_buffer = pe.Node(niu.IdentityInterface(fields=['hmc_xforms']), name='hmc_buffer')
 
+    if pet_tlen <= 1:  # 3D PET
+        petref = pet_file
+        idmat_fname = config.execution.work_dir / 'idmat.tfm'
+        Affine().to_filename(idmat_fname, fmt='itk')
+        hmc_xforms = idmat_fname
+        config.loggers.workflow.debug('3D PET file - motion correction not needed')
     if petref:
         petref_buffer.inputs.petref = petref
-        config.loggers.workflow.debug('Reusing motion correction reference: %s', petref)
+        config.loggers.workflow.debug(f'(Re)using motion correction reference: {petref}')
     if hmc_xforms:
         hmc_buffer.inputs.hmc_xforms = hmc_xforms
-        config.loggers.workflow.debug('Reusing motion correction transforms: %s', hmc_xforms)
+        config.loggers.workflow.debug(f'(Re)using motion correction transforms: {hmc_xforms}')
 
     timing_parameters = prepare_timing_parameters(metadata)
     frame_durations = timing_parameters.get('FrameDuration')
@@ -271,6 +281,8 @@ def init_pet_fit_wf(
             start_time=config.workflow.hmc_start_time,
             frame_durations=frame_durations,
             frame_start_times=frame_start_times,
+            initial_frame=config.workflow.hmc_init_frame,
+            fixed_frame=config.workflow.hmc_fix_frame,
         )
 
         ds_hmc_wf = init_ds_hmc_wf(
@@ -390,42 +402,12 @@ def init_pet_fit_wf(
     ds_petmask_wf.inputs.inputnode.source_files = [pet_file]
     workflow.connect([(merge_mask, ds_petmask_wf, [('out', 'inputnode.petmask')])])
 
-    # Stage 4: Segmentation
-    config.loggers.workflow.info(
-        'PET Stage 4: Adding segmentation workflow using the segmentation: %s', config.workflow.seg
-    )
-    segmentation_wf = init_segmentation_wf(
-        seg=config.workflow.seg,
-        name=f'pet_{config.workflow.seg}_seg_wf',
-    )
+    pvc_method = getattr(config.workflow, 'pvc_method', None)
 
-    workflow.connect(
-        [
-            (
-                inputnode,
-                segmentation_wf,
-                [
-                    ('t1w_preproc', 'inputnode.t1w_preproc'),
-                    ('subject_id', 'inputnode.subject_id'),
-                    ('subjects_dir', 'inputnode.subjects_dir'),
-                ],
-            ),
-            (
-                segmentation_wf,
-                outputnode,
-                [
-                    ('outputnode.segmentation', 'segmentation'),
-                    ('outputnode.dseg_tsv', 'dseg_tsv'),
-                ],
-            ),
-        ]
-    )
-
-    # Stage 5: Reference mask generation
+    # Stage 4: Reference mask generation
     if config.workflow.ref_mask_name:
         config.loggers.workflow.info(
-            'PET Stage 5: Generating %s reference mask',
-            config.workflow.ref_mask_name,
+            f'PET Stage 4: Generating {config.workflow.ref_mask_name} reference mask'
         )
 
         refmask_wf = init_pet_refmask_wf(
@@ -458,32 +440,32 @@ def init_pet_fit_wf(
         )
         pet_ref_tacs_wf.inputs.inputnode.ref_mask_name = config.workflow.ref_mask_name
 
-        ds_ref_tacs = pe.Node(
-            DerivativesDataSink(
-                base_directory=config.execution.petprep_dir,
-                suffix='timeseries',
-                seg=config.workflow.seg,
-                desc='preproc',
-                ref=config.workflow.ref_mask_name,
-                allowed_entities=('seg', 'ref'),
-                TaskName=metadata.get('TaskName'),
-                **timing_parameters,
-            ),
-            name='ds_ref_tacs',
-            run_without_submitting=True,
-            mem_gb=config.DEFAULT_MEMORY_MIN_GB,
-        )
-        ds_ref_tacs.inputs.source_file = pet_file
+        if pvc_method is None:
+            ds_ref_tacs = pe.Node(
+                DerivativesDataSink(
+                    base_directory=config.execution.petprep_dir,
+                    suffix='tacs',
+                    desc='preproc',
+                    label=config.workflow.ref_mask_name,
+                    allowed_entities=('label',),
+                    TaskName=metadata.get('TaskName'),
+                    **timing_parameters,
+                ),
+                name='ds_ref_tacs',
+                run_without_submitting=True,
+                mem_gb=config.DEFAULT_MEMORY_MIN_GB,
+            )
+            ds_ref_tacs.inputs.source_file = pet_file
 
         workflow.connect([(inputnode, gm_select, [('t1w_tpms', 'inlist')])])
 
         workflow.connect(
             [
                 (
-                    segmentation_wf,
+                    inputnode,
                     refmask_wf,
                     [
-                        ('outputnode.segmentation', 'inputnode.seg_file'),
+                        ('segmentation', 'inputnode.seg_file'),
                     ],
                 ),
                 (
@@ -506,10 +488,18 @@ def init_pet_fit_wf(
                     ],
                 ),
                 (
-                    petref_buffer,
+                    inputnode,
                     ds_refmask_wf,
                     [
-                        ('pet_file', 'inputnode.source_files'),
+                        ('segmentation', 'inputnode.segmentation'),
+                        ('t1w_preproc', 'inputnode.anat_sources'),
+                    ],
+                ),
+                (
+                    gm_select,
+                    ds_refmask_wf,
+                    [
+                        ('out', 'inputnode.source_files'),
                     ],
                 ),
                 (
@@ -555,17 +545,22 @@ def init_pet_fit_wf(
                         ('outputnode.refmask_file', 'inputnode.mask_file'),
                     ],
                 ),
-                (
-                    pet_ref_tacs_wf,
-                    ds_ref_tacs,
-                    [
-                        ('outputnode.timeseries', 'in_file'),
-                    ],
-                ),
             ]
         )
+        if pvc_method is None:
+            workflow.connect(
+                [
+                    (
+                        pet_ref_tacs_wf,
+                        ds_ref_tacs,
+                        [
+                            ('outputnode.timeseries', 'in_file'),
+                        ],
+                    ),
+                ]
+            )
     else:
-        config.loggers.workflow.info('PET Stage 5: Reference mask generation skipped')
+        config.loggers.workflow.info('PET Stage 4: Reference mask generation skipped')
 
     return workflow
 
@@ -588,9 +583,9 @@ def init_pet_native_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.tests import mock_config
-            from fmriprep import config
-            from fmriprep.workflows.pet.fit import init_pet_native_wf
+            from petprep.workflows.tests import mock_config
+            from petprep import config
+            from petprep.workflows.pet.fit import init_pet_native_wf
             with mock_config():
                 pet_file = config.execution.bids_dir / "sub-01" / "func" \
                     / "sub-01_task-mixedgamblestask_run-01_pet.nii.gz"

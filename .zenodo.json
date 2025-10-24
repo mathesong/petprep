@@ -1,29 +1,86 @@
 {
   "title": "PETPrep: a robust preprocessing pipeline for PET Data",
   "description": "<p>PETPrep is a robust and easy-to-use pipeline for preprocessing of diverse PET data. The transparent workflow dispenses of manual intervention, thereby ensuring the reproducibility of the results.</p>",
-  "contributors": [ 
+  "contributors": [
+    {
+      "orcid": "0000-0002-6533-164X",
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Christopher J. Markiewicz",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-8435-6191",
+      "affiliation": "School of Engineering, HES-SO University of Applied Sciences and Arts Western Switzerland, Sion, Switzerland",
+      "name": "Oscar Esteban",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-7252-7771",
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Mathias Goncalves",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-9661-1396",
+      "affiliation": "Brigham and Women's Hospital, Mass General Brigham, Harvard Medical School, MA, USA",
+      "name": "Jon Haitz Legarreta Gorro\u00f1o",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-6550-4574",
+      "affiliation": "Data Science and Sharing Team, National Institute of Mental Health, Bethesda, MD, USA",
+      "name": "Anthony Galassi",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-5042-7422",
+      "affiliation": "National Institute on Aging",
+      "name": "Murat Bilgel",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0009-0006-4844-2088",
+      "affiliation": "Neurobiology Research Unit, Rigshospitalet, Copenhagen and Department of Computer Science, University of Copenhagen",
+      "name": "Alice Schiavone",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-3987-6603",
+      "affiliation": "National Institute on Aging",
+      "name": "Bae Jonghyun",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-5920-5102",
+      "affiliation": "Karolinska Institutet, and Neurobiology Research Unit",
+      "name": "Ruben D\u00f6rfel",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0002-5643-1243",
+      "affiliation": "Montreal Neurological Institute",
+      "name": "Eric Ceballos",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-7213-9253",
+      "affiliation": "Institute of Mental Health Research",
+      "name": "Rami Hamati",
+      "type": "Researcher"
+    },
+    {
+      "orcid": "0000-0001-6755-0259",
+      "affiliation": "Department of Psychology, Stanford University, CA, USA",
+      "name": "Russell A. Poldrack",
+      "type": "Researcher"
+    }
   ],
   "creators": [
-    { 
+    {
+      "orcid": "0000-0003-2131-5688",
       "affiliation": "Department of Computer Science, University of Copenhagen",
-      "name": "Norgaard, Martin",
-      "orcid": "0000-0003-2131-5688"
-    },
-    {
-      "affiliation": "Lausanne University Hospital and University of Lausanne, Lausanne, Switzerland",
-      "name": "Esteban, Oscar",
-      "orcid": "0000-0001-8435-6191"
-    },
-    {
-      "affiliation": "Department of Psychology, Stanford University",
-      "name": "Markiewicz, Christopher J.",
-      "orcid": "0000-0002-6533-164X"
-    },
-    {
-      "affiliation": "Department of Psychology, Stanford University",
-      "name": "Poldrack, Russell A.",
-      "orcid": "0000-0001-6755-0259"
-    },
+      "name": "Martin N\u00f8rgaard"
+    }
   ],
   "keywords": [
     "neuroimaging",

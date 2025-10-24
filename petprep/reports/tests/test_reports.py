@@ -9,6 +9,7 @@ from petprep.reports.core import generate_reports
 from ... import config, data
 
 data_dir = data.load('tests')
+pet_source = data_dir / 'work' / 'reportlets' / 'petprep' / 'sub-01' / 'pet'
 
 
 # Test with and without sessions' aggregation
@@ -18,18 +19,14 @@ data_dir = data.load('tests')
         (
             3,
             [
-                'sub-001_anat.html',
-                'sub-001_ses-001_func.html',
-                'sub-001_ses-003_func.html',
-                'sub-001_ses-004_func.html',
-                'sub-001_ses-005_func.html',
-                'sub-001_ses-001_pet.html',
-                'sub-001_ses-003_pet.html',
-                'sub-001_ses-004_pet.html',
-                'sub-001_ses-005_pet.html',
+                'sub-01_anat.html',
+                'sub-01_ses-001_pet.html',
+                'sub-01_ses-003_pet.html',
+                'sub-01_ses-004_pet.html',
+                'sub-01_ses-005_pet.html',
             ],
         ),
-        (4, ['sub-001.html']),
+        (4, ['sub-01.html']),
     ],
 )
 # Test with and without crash file
@@ -41,7 +38,7 @@ data_dir = data.load('tests')
     'session_list', [['001', '003', '004', '005'], ['ses-001', 'ses-003', 'ses-004', 'ses-005']]
 )
 # Test sub- prefix stripping
-@pytest.mark.parametrize('subject_label', ['001', 'sub-001'])
+@pytest.mark.parametrize('subject_label', ['01', 'sub-01'])
 @pytest.mark.skipif(
     not Path.exists(data_dir / 'work'),
     reason='Package installed - large test data directory excluded from wheel',
@@ -58,8 +55,8 @@ def test_ReportSeparation(
 ):
     fake_uuid = 'fake_uuid'
 
-    sub_dir = tmp_path / 'sub-001'
-    shutil.copytree(data_dir / 'work/reportlets/fmriprep/sub-001', sub_dir)
+    sub_dir = tmp_path / 'sub-01'
+    shutil.copytree(data_dir / 'work/reportlets/petprep/sub-01', sub_dir)
 
     # Test report generation with and without crash file
     if error:
@@ -82,7 +79,7 @@ def test_ReportSeparation(
     config.execution.layout = BIDSLayout(data_dir / 'ds000005')
     monkeypatch.setattr(config.execution.layout, 'get_sessions', mock_session_list)
     monkeypatch.setattr(
-        config.execution, 'bids_filters', {'bold': {'session': ['001', '003', '004', '005']}}
+        config.execution, 'bids_filters', {'pet': {'session': ['001', '003', '004', '005']}}
     )
 
     # Generate report
@@ -115,38 +112,31 @@ def test_ReportSeparation(
         )
 
 
+@pytest.mark.skipif(
+    not pet_source.exists(),
+    reason='Package installed - large test data directory excluded from wheel',
+)
 def test_pet_report(tmp_path, monkeypatch):
     fake_uuid = 'fake_uuid'
 
-    pet_source = data_dir / 'work/reportlets/petprep'
     sub_dir = tmp_path / 'sub-01' / 'figures'
     sub_dir.mkdir(parents=True)
 
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-about_T1w.html', sub_dir / 'sub-01_desc-about_T1w.html'
-    )
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-summary_pet.html',
-        sub_dir / 'sub-01_desc-summary_pet.html',
-    )
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-validation_pet.html',
-        sub_dir / 'sub-01_desc-validation_pet.html',
-    )
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-carpetplot_pet.svg',
-        sub_dir / 'sub-01_desc-carpetplot_pet.svg',
-    )
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-confoundcorr_pet.svg',
-        sub_dir / 'sub-01_desc-confoundcorr_pet.svg',
-    )
-    shutil.copy2(
-        pet_source / 'sub-01/sub-01_desc-coreg_pet.svg', sub_dir / 'sub-01_desc-coreg_pet.svg'
-    )
+    if not pet_source.exists():
+        pytest.skip('Package installed - large test data directory excluded from wheel')
 
-    config.execution.aggr_ses_reports = 4
-    config.execution.layout = BIDSLayout(data_dir / 'ds000005')
+    for fl in [
+        'sub-01_desc-about_T1w.html',
+        'sub-01_desc-summary_pet.html',
+        'sub-01_desc-validation_pet.html',
+        'sub-01_desc-carpetplot_pet.svg',
+        'sub-01_desc-confoundcorr_pet.svg',
+        'sub-01_desc-coreg_pet.svg',
+    ]:
+        shutil.copy2(pet_source / fl, sub_dir / fl)
+
+    monkeypatch.setattr(config.execution, 'aggr_ses_reports', 4)
+    monkeypatch.setattr(config.execution, 'layout', BIDSLayout(data_dir / 'ds000005'))
     monkeypatch.setattr(config.execution, 'bids_filters', {'pet': {'session': ['baseline']}})
 
     failed_reports = generate_reports(['01'], tmp_path, fake_uuid)

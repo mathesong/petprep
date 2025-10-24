@@ -96,7 +96,7 @@ def generate_reports(
             bootstrap_file = data.load('reports-spec.yml')
             html_report = 'report.html'
         else:
-            # Beyond a threshold, we separate the anatomical report from the functional.
+            # Beyond a threshold, we separate the anatomical report from the PET.
             bootstrap_file = data.load('reports-spec-anat.yml')
             html_report = f'sub-{subject_label}_anat.html'
 
@@ -116,10 +116,10 @@ def generate_reports(
 
         if n_ses > config.execution.aggr_ses_reports:
             # Beyond a certain number of sessions per subject,
-            # we separate the functional reports per session
+            # we separate the PET reports per session
             if session_list is None:
                 all_filters = config.execution.bids_filters or {}
-                filters = all_filters.get('pet', all_filters.get('bold', {}))
+                filters = all_filters.get('pet', {})
                 session_list = config.execution.layout.get_sessions(
                     subject=subject_label, **filters
                 )
@@ -127,8 +127,8 @@ def generate_reports(
             session_list = [ses.removeprefix('ses-') for ses in session_list]
 
             for session_label in session_list:
-                bootstrap_file = data.load('reports-spec-func.yml')
-                html_report = f'sub-{subject_label}_ses-{session_label}_func.html'
+                bootstrap_file = data.load('reports-spec-pet.yml')
+                html_report = f'sub-{subject_label}_ses-{session_label}_pet.html'
 
                 report_error = run_reports(
                     output_dir,
@@ -137,7 +137,7 @@ def generate_reports(
                     bootstrap_file=bootstrap_file,
                     out_filename=html_report,
                     reportlets_dir=reportlets_dir,
-                    errorname=f'report-{run_uuid}-{subject_label}-func.err',
+                    errorname=f'report-{run_uuid}-{subject_label}-pet.err',
                     subject=subject_label,
                     session=session_label,
                 )

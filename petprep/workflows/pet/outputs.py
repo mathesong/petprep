@@ -191,10 +191,10 @@ def init_func_fit_reports_wf(
         ds_refmask_report = pe.Node(
             DerivativesDataSink(
                 base_directory=output_dir,
-                desc='refmask',
-                ref=ref_name,
+                desc='ref',
+                label=ref_name,
                 datatype='figures',
-                allowed_entities=('ref',),
+                allowed_entities=('label',),
             ),
             name='ds_report_refmask',
             run_without_submitting=True,
@@ -329,11 +329,11 @@ def init_func_fit_reports_wf(
         ds_pet_t1_refmask_report = pe.Node(
             DerivativesDataSink(
                 base_directory=output_dir,
-                desc='refmask',
-                ref=ref_name,
+                desc='ref',
+                label=ref_name,
                 suffix='pet',
                 datatype='figures',
-                allowed_entities=('ref',),
+                allowed_entities=('label',),
             ),
             name='ds_pet_t1_refmask_report',
         )
@@ -493,10 +493,12 @@ def init_ds_refmask_wf(
     workflow = pe.Workflow(name=name)
 
     inputnode = pe.Node(
-        niu.IdentityInterface(fields=['source_files', 'refmask']),
+        niu.IdentityInterface(fields=['source_files', 'anat_sources', 'segmentation', 'refmask']),
         name='inputnode',
     )
     outputnode = pe.Node(niu.IdentityInterface(fields=['refmask']), name='outputnode')
+
+    merge_source_files = pe.Node(niu.Merge(3), name='merge_source_files')
 
     sources = pe.Node(
         BIDSURI(
@@ -510,11 +512,11 @@ def init_ds_refmask_wf(
     ds_refmask = pe.Node(
         DerivativesDataSink(
             base_directory=output_dir,
-            datatype='pet',
+            datatype='anat',
             suffix='mask',
-            desc='refmask',
-            ref=ref_name,
-            allowed_entities=('ref',),
+            desc='ref',
+            label=ref_name,
+            allowed_entities=('label',),
             compress=True,
         ),
         name='ds_refmask',
@@ -522,11 +524,16 @@ def init_ds_refmask_wf(
     )
 
     workflow.connect([
-        (inputnode, sources, [('source_files', 'in1')]),
+        (inputnode, merge_source_files, [
+            ('source_files', 'in1'),
+            ('segmentation', 'in2'),
+            ('anat_sources', 'in3'),
+        ]),
+        (merge_source_files, sources, [('out', 'in1')]),
         (inputnode, ds_refmask, [
             ('refmask', 'in_file'),
-            ('source_files', 'source_file'),
         ]),
+        (merge_source_files, ds_refmask, [('out', 'source_file')]),
         (sources, ds_refmask, [('out', 'Sources')]),
         (ds_refmask, outputnode, [('out_file', 'refmask')]),
     ])  # fmt:skip
@@ -900,7 +907,7 @@ def init_pet_preproc_report_wf(
             :graph2use: orig
             :simple_form: yes
 
-            from fmriprep.workflows.pet.resampling import init_pet_preproc_report_wf
+            from petprep.workflows.pet.resampling import init_pet_preproc_report_wf
             wf = init_pet_preproc_report_wf(mem_gb=1, reportlets_dir='.')
 
     Parameters
@@ -993,10 +1000,11 @@ def init_refmask_report_wf(
     ds_mask_report = pe.Node(
         DerivativesDataSink(
             base_directory=output_dir,
-            desc='refmask',
-            ref=ref_name,
+            desc='ref',
+            label=ref_name,
             datatype='figures',
-            allowed_entities=('ref',),
+            allowed_entities=('label',),
+            suffix='pet',
         ),
         name='ds_report_refmask',
         run_without_submitting=True,

@@ -146,7 +146,7 @@ for i, coords in enumerate([-5, 10, 20]):
     disp.add_contours(str(ATLAS_HOME / '1mm_tpm_csf.nii.gz'), colors=['k'], levels=[0.8])
     disp.add_contours(str(ATLAS_HOME / '1mm_tpm_wm.nii.gz'), colors=['w'], levels=[0.8], alpha=0.7)
     disp.add_contours(str(ATLAS_HOME / '1mm_brainmask.nii.gz'), colors=['k'], levels=[0.8], linewidths=[3], alpha=.7)
-    plt.savefig(str(out_folder / ('fmriprep-std-closeup%03d.svg' % i)), format='svg', bbox_inches='tight')
+    plt.savefig(str(out_folder / f'fmriprep-std-closeup{i:03d}.svg'), format='svg', bbox_inches='tight')
 
 for i, coords in enumerate([-5, 10, 20]):
     disp = plotting.plot_anat(str(feat_std), display_mode='z', cut_coords=[coords], cmap='viridis', threshold=30, vmin=50, vmax=170)
@@ -154,7 +154,7 @@ for i, coords in enumerate([-5, 10, 20]):
     disp.add_contours(str(ATLAS_HOME / '1mm_tpm_csf.nii.gz'), colors=['k'], levels=[0.8])
     disp.add_contours(str(ATLAS_HOME / '1mm_tpm_wm.nii.gz'), colors=['w'], levels=[0.8], alpha=0.7)
     disp.add_contours(str(ATLAS_HOME / '1mm_brainmask.nii.gz'), colors=['k'], levels=[0.8], linewidths=[3], alpha=.7)
-    plt.savefig(str(out_folder / ('feat-std-closeup%03d.svg' % i)), format='svg', bbox_inches='tight')
+    plt.savefig(str(out_folder / f'feat-std-closeup{i:03d}.svg'), format='svg', bbox_inches='tight')
 
 
 
@@ -520,15 +520,15 @@ def read_rating(fname, rater=None):
         if name == 'overall':
             data[name] = int(reportlet['rating'])
         elif '_T1w_' in name:
-            data['t1_%s' % name.split('_T1w_')[-1]] = int(reportlet['rating'])
+            data[f't1_{name.split("_T1w_")[-1]}'] = int(reportlet['rating'])
         elif '_bold_' in name:
-            repname = 'bold_%s' % name.split('_bold_')[-1]
+            repname = f'bold_{name.split("_bold_")[-1]}'
             data.setdefault(repname, []).append(int(reportlet['rating']))
         elif '_fieldmap_':
             repname = name.split('_fieldmap_')[-1]
             data.setdefault(repname, []).append(int(reportlet['rating']))
         else:
-            print('Unsupported field name "%s"' % name)
+            print(f'Unsupported field name {name}')
 
     return data
 
