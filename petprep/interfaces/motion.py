@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from base64 import b64encode
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -34,7 +36,7 @@ class MotionPlotInputSpec(BaseInterfaceInputSpec):
 
 
 class MotionPlotOutputSpec(TraitedSpec):
-    gif_file = File(exists=True, desc='Animated before/after motion correction GIF')
+    svg_file = File(exists=True, desc='Animated before/after motion correction SVG')
 
 
 class MotionPlot(SimpleInterface):
@@ -53,16 +55,16 @@ class MotionPlot(SimpleInterface):
     def _run_interface(self, runtime):
         runtime.cwd = Path(runtime.cwd)
 
-        gif_file = runtime.cwd / 'pet_motion_hmc.gif'
-        gif_file.parent.mkdir(parents=True, exist_ok=True)
+        svg_file = runtime.cwd / 'pet_motion_hmc.svg'
+        svg_file.parent.mkdir(parents=True, exist_ok=True)
 
         mid_orig, cut_coords_orig, vmin_orig, vmax_orig = self._compute_display_params(
             self.inputs.original_pet
         )
         _, _, vmin_corr, vmax_corr = self._compute_display_params(self.inputs.corrected_pet)
 
-        gif_file = self._build_animation(
-            output_path=gif_file,
+        svg_file = self._build_animation(
+            output_path=svg_file,
             cut_coords_orig=cut_coords_orig,
             cut_coords_corr=cut_coords_orig,
             vmin_orig=vmin_orig,
@@ -71,7 +73,7 @@ class MotionPlot(SimpleInterface):
             vmax_corr=vmax_corr,
         )
 
-        self._results['gif_file'] = str(gif_file)
+        self._results['svg_file'] = str(svg_file)
 
         return runtime
 
@@ -103,7 +105,10 @@ class MotionPlot(SimpleInterface):
         orig_img = nib.load(self.inputs.original_pet)
         corr_img = nib.load(self.inputs.corrected_pet)
 
-        n_frames = min(orig_img.shape[-1], corr_img.shape[-1])
+        n_frames = min(
+            orig_img.shape[-1] if orig_img.ndim > 3 else 1,
+            corr_img.shape[-1] if corr_img.ndim > 3 else 1,
+        )
 
         with TemporaryDirectory() as tmpdir:
             frames = []
@@ -146,7 +151,37 @@ class MotionPlot(SimpleInterface):
                 combined = np.concatenate([orig_arr, corr_arr], axis=1)
                 frames.append(combined.astype(orig_arr.dtype, copy=False))
 
-            imageio.mimsave(output_path, frames, duration=self.inputs.duration, loop=0)
+            width = int(frames[0].shape[1])
+            height = int(frames[0].shape[0])
+            total_duration = self.inputs.duration * n_frames
+
+            svg_parts = [
+                '<svg xmlns="http://www.w3.org/2000/svg" '
+                f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+                '<style>',
+                f'.frame {{opacity: 0; animation: framefade {total_duration}s infinite;}}',
+                '@keyframes framefade {0%, 80% {opacity: 1;} 100% {opacity: 0;}}',
+            ]
+
+            for idx in range(n_frames):
+                delay = self.inputs.duration * idx
+                svg_parts.append(f'.frame-{idx} {{animation-delay: {delay}s;}}')
+
+            svg_parts.append('</style>')
+
+            for idx, frame in enumerate(frames):
+                buffer = BytesIO()
+                imageio.imwrite(buffer, frame, format='PNG')
+                data_uri = b64encode(buffer.getvalue()).decode('ascii')
+                svg_parts.append(
+                    f'<image class="frame frame-{idx}" '
+                    f'width="{width}" height="{height}" x="0" y="0" '
+                    f'href="data:image/png;base64,{data_uri}" />'
+                )
+
+            svg_parts.append('</svg>')
+
+            output_path.write_text('\n'.join(svg_parts), encoding='utf-8')
 
         return output_path
 
