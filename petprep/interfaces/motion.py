@@ -179,7 +179,26 @@ class MotionPlot(SimpleInterface):
                     f'href="data:image/png;base64,{data_uri}" />'
                 )
 
-            svg_parts.append('</svg>')
+            svg_parts.extend(
+                [
+                    '<script>',
+                    '(() => {',
+                    '  const svg = document.currentScript.parentNode;',
+                    "  const restart = () => {",
+                    "    const frames = svg.querySelectorAll('.frame');",
+                    '    frames.forEach((frame) => {',
+                    "      frame.style.animation = 'none';",
+                    '      // Force reflow to restart the CSS animation',
+                    '      void frame.getBoundingClientRect();',
+                    "      frame.style.animation = '';",
+                    '    });',
+                    '  };',
+                    "  svg.addEventListener('click', restart);",
+                    '})();',
+                    '</script>',
+                    '</svg>',
+                ]
+            )
 
             output_path.write_text('\n'.join(svg_parts), encoding='utf-8')
 
