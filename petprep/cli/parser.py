@@ -756,11 +756,10 @@ def parse_args(args=None, namespace=None):
 
     if config.execution.session_label:
         config.execution.bids_filters = config.execution.bids_filters or {}
-        for modality in ('pet', 'anat'):
-            config.execution.bids_filters[modality] = {
-                **config.execution.bids_filters.get(modality, {}),
-                'session': config.execution.session_label,
-            }
+        config.execution.bids_filters['pet'] = {
+            **config.execution.bids_filters.get('pet', {}),
+            'session': config.execution.session_label,
+        }
 
     pvc_vals = (opts.pvc_tool, opts.pvc_method, opts.pvc_psf)
     if any(val is not None for val in pvc_vals) and not all(val is not None for val in pvc_vals):
