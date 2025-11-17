@@ -32,7 +32,7 @@ class MotionPlotInputSpec(BaseInterfaceInputSpec):
             'transforms to the original data in native PET space'
         ),
     )
-    duration = traits.Float(0.4, usedefault=True, desc='Frame duration for the GIF (seconds)')
+    duration = traits.Float(0.25, usedefault=True, desc='Frame duration for the GIF (seconds)')
 
 
 class MotionPlotOutputSpec(TraitedSpec):
