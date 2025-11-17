@@ -232,9 +232,7 @@ def test_session_label_only_filters_pet(tmp_path):
     out_dir = tmp_path / 'out'
     work_dir = tmp_path / 'work'
     bids.mkdir()
-    (bids / 'dataset_description.json').write_text(
-        '{"Name": "Test", "BIDSVersion": "1.8.0"}'
-    )
+    (bids / 'dataset_description.json').write_text('{"Name": "Test", "BIDSVersion": "1.8.0"}')
 
     anat_path = bids / 'sub-01' / 'anat' / 'sub-01_T1w.nii.gz'
     anat_path.parent.mkdir(parents=True, exist_ok=True)

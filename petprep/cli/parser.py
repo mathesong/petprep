@@ -928,7 +928,7 @@ applied."""
         if missing_sessions:
             parser.error(
                 'One or more session labels were not found in the BIDS directory: '
-                f"{', '.join(sorted(missing_sessions))}."
+                f'{", ".join(sorted(missing_sessions))}.'
             )
 
     config.execution.participant_label = sorted(participant_label)
