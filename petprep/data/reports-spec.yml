@@ -128,7 +128,7 @@ sections:
     subtitle: PET Summary and Carpet Plot
 
   - bids: {datatype: figures, desc: hmc, suffix: pet}
-    caption: Animated frames before and after PET head motion correction (click image to restart).
+    caption: Animated frames before and after PET head motion correction (keep cursor over image to restart).
     static: false
     subtitle: Motion correction
 
