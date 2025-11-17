@@ -24,9 +24,9 @@
 
 from argparse import ArgumentError
 
-import pytest
 import nibabel as nb
 import numpy as np
+import pytest
 from packaging.version import Version
 
 from ... import config
