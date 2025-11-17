@@ -11,11 +11,17 @@ from tempfile import TemporaryDirectory
 
 import nibabel as nib
 import numpy as np
-from nipype.interfaces.base import BaseInterfaceInputSpec, File, SimpleInterface, TraitedSpec, traits
+from imageio import v2 as imageio
 from nilearn import image
 from nilearn.plotting import plot_epi
 from nilearn.plotting.find_cuts import find_xyz_cut_coords
-from imageio import v2 as imageio
+from nipype.interfaces.base import (
+    BaseInterfaceInputSpec, 
+    File, 
+    SimpleInterface, 
+    TraitedSpec, 
+    traits
+)
 
 
 class MotionPlotInputSpec(BaseInterfaceInputSpec):
@@ -193,7 +199,7 @@ class MotionPlot(SimpleInterface):
                     "  const frames = svg.querySelectorAll('.frame');",
                     f'  const cycleMs = {total_duration * 1000:.0f};',
                     '  let restartTimer = null;',
-                    "  const restart = () => {",
+                    '  const restart = () => {',
                     '    frames.forEach((frame) => {',
                     "      frame.style.animation = 'none';",
                     '      // Force reflow to restart the CSS animation',
