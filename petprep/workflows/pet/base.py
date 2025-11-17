@@ -283,7 +283,8 @@ configured with cubic B-spline interpolation.
                 desc='hmc',
                 datatype='figures',
                 suffix='pet',
-                name='ds_report_motion',
+            ),
+            name='ds_report_motion',
             run_without_submitting=True,
             mem_gb=config.DEFAULT_MEMORY_MIN_GB,
         )
