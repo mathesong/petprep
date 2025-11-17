@@ -151,12 +151,12 @@ class MotionPlot(SimpleInterface):
                     pad = max_height - orig_arr.shape[0]
                     orig_arr = np.pad(
                         orig_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255
-                        )
+                    )
                 if corr_arr.shape[0] < max_height:
                     pad = max_height - corr_arr.shape[0]
                     corr_arr = np.pad(
                         corr_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255
-                        )
+                    )
 
                 combined = np.concatenate([orig_arr, corr_arr], axis=1)
                 frames.append(combined.astype(orig_arr.dtype, copy=False))

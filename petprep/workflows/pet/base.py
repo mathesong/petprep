@@ -297,7 +297,7 @@ configured with cubic B-spline interpolation.
                 [
                     ('outputnode.pet_minimal', 'original_pet'),
                     ('outputnode.pet_native', 'corrected_pet'),
-                ]
+                ],
             ),
             (motion_report, ds_motion_report, [('svg_file', 'in_file')]),
         ]
