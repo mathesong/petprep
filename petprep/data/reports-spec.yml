@@ -127,6 +127,11 @@ sections:
     static: false
     subtitle: PET Summary and Carpet Plot
 
+  - bids: {datatype: figures, desc: hmc, suffix: pet}
+    caption: Animated frames before and after PET head motion correction.
+    static: false
+    subtitle: Motion correction
+
   - bids: {datatype: figures, desc: confoundcorr, suffix: pet}
     caption: |
       Left: Correlation heatmap illustrating relationships among PET-derived confound variables (e.g., motion parameters, global signal).
