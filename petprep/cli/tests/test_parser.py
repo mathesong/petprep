@@ -25,6 +25,8 @@
 from argparse import ArgumentError
 
 import pytest
+import nibabel as nb
+import numpy as np
 from packaging.version import Version
 
 from ... import config
@@ -223,6 +225,47 @@ def test_derivatives(tmp_path):
         parser.parse_args(temp_args)
 
     _reset_config()
+
+
+def test_session_label_only_filters_pet(tmp_path):
+    bids = tmp_path / 'bids'
+    out_dir = tmp_path / 'out'
+    work_dir = tmp_path / 'work'
+    bids.mkdir()
+    (bids / 'dataset_description.json').write_text(
+        '{"Name": "Test", "BIDSVersion": "1.8.0"}'
+    )
+
+    anat_path = bids / 'sub-01' / 'anat' / 'sub-01_T1w.nii.gz'
+    anat_path.parent.mkdir(parents=True, exist_ok=True)
+    nb.Nifti1Image(np.zeros((5, 5, 5)), np.eye(4)).to_filename(anat_path)
+
+    pet_path = bids / 'sub-01' / 'ses-blocked' / 'pet' / 'sub-01_ses-blocked_pet.nii.gz'
+    pet_path.parent.mkdir(parents=True, exist_ok=True)
+    nb.Nifti1Image(np.zeros((5, 5, 5, 1)), np.eye(4)).to_filename(pet_path)
+    (pet_path.with_suffix('').with_suffix('.json')).write_text(
+        '{"FrameTimesStart": [0], "FrameDuration": [1]}'
+    )
+
+    try:
+        parse_args(
+            args=[
+                str(bids),
+                str(out_dir),
+                'participant',
+                '--session-label',
+                'blocked',
+                '--skip-bids-validation',
+                '-w',
+                str(work_dir),
+            ]
+        )
+
+        filters = config.execution.bids_filters
+        assert filters.get('pet', {}).get('session') == ['blocked']
+        assert 'session' not in filters.get('anat', {})
+    finally:
+        _reset_config()
 
 
 def test_pvc_argument_handling(tmp_path, minimal_bids):
