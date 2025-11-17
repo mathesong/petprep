@@ -159,7 +159,13 @@ class MotionPlot(SimpleInterface):
                 '<svg xmlns="http://www.w3.org/2000/svg" '
                 f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
                 '<style>',
-                f'.frame {{opacity: 0; animation: framefade {total_duration}s infinite;}}',
+                (
+                    '.frame {'
+                    f' opacity: 0; animation: framefade {total_duration}s infinite;'
+                    ' animation-play-state: paused;'
+                    '}'
+                ),
+                '.playing .frame {animation-play-state: running;}',
                 '@keyframes framefade {0%, 80% {opacity: 1;} 100% {opacity: 0;}}',
             ]
 
@@ -184,8 +190,10 @@ class MotionPlot(SimpleInterface):
                     '<script>',
                     '(() => {',
                     '  const svg = document.currentScript.parentNode;',
+                    "  const frames = svg.querySelectorAll('.frame');",
+                    f'  const cycleMs = {total_duration * 1000:.0f};',
+                    '  let restartTimer = null;',
                     "  const restart = () => {",
-                    "    const frames = svg.querySelectorAll('.frame');",
                     '    frames.forEach((frame) => {',
                     "      frame.style.animation = 'none';",
                     '      // Force reflow to restart the CSS animation',
@@ -193,7 +201,26 @@ class MotionPlot(SimpleInterface):
                     "      frame.style.animation = '';",
                     '    });',
                     '  };',
-                    "  svg.addEventListener('click', restart);",
+                    '  const start = () => {',
+                    '    if (restartTimer) {',
+                    '      clearInterval(restartTimer);',
+                    '    }',
+                    '    svg.classList.add("playing");',
+                    '    restart();',
+                    '    restartTimer = setInterval(restart, cycleMs);',
+                    '  };',
+                    '  const stop = () => {',
+                    '    svg.classList.remove("playing");',
+                    '    if (restartTimer) {',
+                    '      clearInterval(restartTimer);',
+                    '      restartTimer = null;',
+                    '    }',
+                    '    frames.forEach((frame) => {',
+                    "      frame.style.animation = 'none';",
+                    '    });',
+                    '  };',
+                    "  svg.addEventListener('mouseenter', start);",
+                    "  svg.addEventListener('mouseleave', stop);",
                     '})();',
                     '</script>',
                     '</svg>',
