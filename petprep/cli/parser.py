@@ -188,8 +188,13 @@ def _build_parser(**kwargs):
         'identifier (the sub- prefix can be removed)',
     )
     # Re-enable when option is actually implemented
-    # g_bids.add_argument('-s', '--session-id', action='store', default='single_session',
-    #                     help='Select a specific session to be processed')
+    g_bids.add_argument(
+        '--session-label',
+        nargs='+',
+        type=lambda label: label.removeprefix('ses-'),
+        help='A space delimited list of session identifiers or a single '
+        'identifier (the ses- prefix can be removed)',
+    )
     # Re-enable when option is actually implemented
     # g_bids.add_argument('-r', '--run-id', action='store', default='single_run',
     #                     help='Select a specific run to be processed')
@@ -749,6 +754,14 @@ def parse_args(args=None, namespace=None):
     config.execution.log_level = int(max(25 - 5 * opts.verbose_count, logging.DEBUG))
     config.from_dict(vars(opts), init=['nipype'])
 
+    if config.execution.session_label:
+        config.execution.bids_filters = config.execution.bids_filters or {}
+        for modality in ('pet', 'anat'):
+            config.execution.bids_filters[modality] = {
+                **config.execution.bids_filters.get(modality, {}),
+                'session': config.execution.session_label,
+            }
+
     pvc_vals = (opts.pvc_tool, opts.pvc_method, opts.pvc_psf)
     if any(val is not None for val in pvc_vals) and not all(val is not None for val in pvc_vals):
         parser.error('Options --pvc-tool, --pvc-method and --pvc-psf must be used together.')
@@ -907,6 +920,17 @@ applied."""
         parser.error(
             f'One or more participant labels were not found in the BIDS directory: {", ".join(missing_subjects)}.'
         )
+
+    if config.execution.session_label:
+        available_sessions = set(
+            config.execution.layout.get_sessions(subject=list(participant_label) or None)
+        )
+        missing_sessions = set(config.execution.session_label) - available_sessions
+        if missing_sessions:
+            parser.error(
+                'One or more session labels were not found in the BIDS directory: '
+                f"{', '.join(sorted(missing_sessions))}."
+            )
 
     config.execution.participant_label = sorted(participant_label)
     config.workflow.skull_strip_template = config.workflow.skull_strip_template[0]
