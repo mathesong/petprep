@@ -16,11 +16,11 @@ from nilearn import image
 from nilearn.plotting import plot_epi
 from nilearn.plotting.find_cuts import find_xyz_cut_coords
 from nipype.interfaces.base import (
-    BaseInterfaceInputSpec, 
-    File, 
-    SimpleInterface, 
-    TraitedSpec, 
-    traits
+    BaseInterfaceInputSpec,
+    File,
+    SimpleInterface,
+    TraitedSpec,
+    traits,
 )
 
 
