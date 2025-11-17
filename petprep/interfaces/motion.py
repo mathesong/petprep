@@ -126,7 +126,7 @@ class MotionPlot(SimpleInterface):
                     image.index_img(self.inputs.original_pet, idx),
                     colorbar=True,
                     display_mode='ortho',
-                    title=f'Before motion correction | Frame {idx+1}',
+                    title=f'Before motion correction | Frame {idx + 1}',
                     cut_coords=cut_coords_orig,
                     vmin=vmin_orig,
                     vmax=vmax_orig,
@@ -136,7 +136,7 @@ class MotionPlot(SimpleInterface):
                     image.index_img(self.inputs.corrected_pet, idx),
                     colorbar=True,
                     display_mode='ortho',
-                    title=f'After motion correction | Frame {idx+1}',
+                    title=f'After motion correction | Frame {idx + 1}',
                     cut_coords=cut_coords_corr,
                     vmin=vmin_corr,
                     vmax=vmax_corr,
@@ -149,10 +149,14 @@ class MotionPlot(SimpleInterface):
                 max_height = max(orig_arr.shape[0], corr_arr.shape[0])
                 if orig_arr.shape[0] < max_height:
                     pad = max_height - orig_arr.shape[0]
-                    orig_arr = np.pad(orig_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255)
+                    orig_arr = np.pad(
+                        orig_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255
+                        )
                 if corr_arr.shape[0] < max_height:
                     pad = max_height - corr_arr.shape[0]
-                    corr_arr = np.pad(corr_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255)
+                    corr_arr = np.pad(
+                        corr_arr, ((0, pad), (0, 0), (0, 0)), mode='constant', constant_values=255
+                        )
 
                 combined = np.concatenate([orig_arr, corr_arr], axis=1)
                 frames.append(combined.astype(orig_arr.dtype, copy=False))
