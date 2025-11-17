@@ -32,7 +32,11 @@ class MotionPlotInputSpec(BaseInterfaceInputSpec):
             'transforms to the original data in native PET space'
         ),
     )
-    duration = traits.Float(1.0, usedefault=True, desc='Frame duration for the GIF (seconds)')
+    duration = traits.Float(
+        0.5,
+        usedefault=True,
+        desc='Frame duration for the animation (seconds); smaller is faster',
+    )
 
 
 class MotionPlotOutputSpec(TraitedSpec):
@@ -155,16 +159,27 @@ class MotionPlot(SimpleInterface):
             height = int(frames[0].shape[0])
             total_duration = self.inputs.duration * n_frames
 
+            frame_pct = 100 / max(n_frames, 1)
+            visible_pct = max(frame_pct * 0.9, 1.0)
+
             svg_parts = [
                 '<svg xmlns="http://www.w3.org/2000/svg" '
                 f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
                 '<style>',
-                f'.frame {{opacity: 0; animation: framefade {total_duration}s infinite;}}',
-                '@keyframes framefade {0%, 80% {opacity: 1;} 100% {opacity: 0;}}',
+                (
+                    '.frame {'
+                    f'opacity: 0; animation: framefade {total_duration}s linear infinite;'
+                    ' animation-fill-mode: both;'
+                    '}'
+                ),
+                (
+                    f'@keyframes framefade {{0%, {visible_pct:.3f}% {{opacity: 1;}} '
+                    f'{visible_pct + 0.01:.3f}%, 100% {{opacity: 0;}}}}'
+                ),
             ]
 
             for idx in range(n_frames):
-                delay = self.inputs.duration * idx
+                delay = -(self.inputs.duration * idx)
                 svg_parts.append(f'.frame-{idx} {{animation-delay: {delay}s;}}')
 
             svg_parts.append('</style>')
