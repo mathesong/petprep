@@ -267,7 +267,7 @@ class MotionPlot(SimpleInterface):
                         )
 
                 fd_label_y = fd_axis_y_top + (fd_y_range / 2)
-                fd_label_offset = 40
+                fd_label_offset = 35
 
                 tick_values = np.linspace(0, fd_max, num=3)
                 tick_length = 6
@@ -282,7 +282,7 @@ class MotionPlot(SimpleInterface):
                     label_elems.append(
                         f'<text x="{fd_x_start - tick_length - 6}" y="{y_coord + 4:.2f}" '
                         'font-size="12" text-anchor="end">'
-                        f'{tick_value:.2f}</text>'
+                        f'{tick_value:.1f}</text>'
                     )
 
                 svg_parts.extend(
