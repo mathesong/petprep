@@ -143,6 +143,20 @@ def test_segmentation_shared_across_runs(multisession_bids_root):
         assert all('_seg_wf' not in n for n in pet_node.list_node_names())
 
 
+def test_motion_report_skipped_when_single_frame(bids_root, caplog):
+    pet_file = bids_root / 'sub-01' / 'pet' / 'sub-01_pet.nii.gz'
+
+    with mock_config(bids_dir=bids_root), caplog.at_level('WARNING', logger='nipype.workflow'):
+        with patch(
+            'petprep.workflows.pet.base.estimate_pet_mem_usage',
+            return_value=(1, {'filesize': 0.0, 'resampled': 0.0, 'largemem': 0.0}),
+        ):
+            wf = init_pet_wf(pet_series=[str(pet_file)])
+
+    assert 'motion_report' not in wf.list_node_names()
+    assert any('Motion report will be skipped' in rec.message for rec in caplog.records)
+
+
 def _make_params(
     pet2anat_init: str = 'auto',
     medial_surface_nan: bool = False,
