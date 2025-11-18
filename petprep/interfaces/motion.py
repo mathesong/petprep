@@ -256,11 +256,11 @@ class MotionPlot(SimpleInterface):
 
                 fd_label_y = fd_axis_y_top + (fd_y_range / 2)
 
-                points_str = " ".join(points)
+                points_str = ' '.join(points)
 
                 svg_parts.extend(
                     [
-                        f'<g class="fd-plot" aria-label="Framewise displacement">',
+                        '<g class="fd-plot" aria-label="Framewise displacement">',
                         f'<line class="fd-axis" x1="{fd_x_start}" x2="{fd_x_end}" '
                         f'y1="{fd_axis_y}" y2="{fd_axis_y}" />',
                         f'<line class="fd-axis" x1="{fd_x_start}" x2="{fd_x_start}" '
