@@ -254,6 +254,8 @@ class MotionPlot(SimpleInterface):
                         f'cy="{y_coord:.2f}" r="3" data-value="{value:.6f}" />'
                     )
 
+                fd_label_y = fd_axis_y_top + (fd_y_range / 2)
+
                 svg_parts.extend(
                     [
                         f'<g class="fd-plot" aria-label="Framewise displacement">',
@@ -266,10 +268,10 @@ class MotionPlot(SimpleInterface):
                         f'<circle id="fd-marker" r="6" cx="{fd_x_start}" cy="{fd_axis_y}" />',
                         f'<text id="fd-value" x="{fd_x_start}" '
                         f'y="{fd_axis_y_top - 12}" aria-live="polite"></text>',
-                        f'<text x="{fd_x_start - 25}" y="{fd_axis_y_top + 5}" '
+                        f'<text x="{fd_x_start - 25}" y="{fd_label_y:.2f}" '
                         'font-size="14" text-anchor="middle" transform='
-                        f'"rotate(-90 {fd_x_start - 25},{fd_axis_y_top + 5})">'
-                        'Framewise displacement (mm)</text>',
+                        f'"rotate(-90 {fd_x_start - 25},{fd_label_y:.2f})">'
+                        'FD (mm)</text>',
                         f'<text x="{(fd_x_start + fd_x_end) / 2:.2f}" '
                         f'y="{fd_axis_y + 35}" font-size="14" text-anchor="middle">'
                         'Frames</text>',
