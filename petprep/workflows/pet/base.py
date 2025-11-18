@@ -824,6 +824,14 @@ Non-gridded (surface) resamplings were performed using `mri_vol2surf`
             ]),
         ])  # fmt:skip
 
+        if nvols > 1:
+            workflow.connect(
+                pet_confounds_wf,
+                'outputnode.confounds_file',
+                motion_report,
+                'fd_file',
+            )
+
         if spaces.get_spaces(nonstandard=False, dim=(3,)):
             carpetplot_wf = init_carpetplot_wf(
                 mem_gb=mem_gb['resampled'],
