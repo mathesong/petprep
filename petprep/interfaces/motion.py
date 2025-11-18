@@ -258,13 +258,16 @@ class MotionPlot(SimpleInterface):
                     )
                     if idx > 0:
                         prev_x, prev_y = map(float, points[idx - 1].split(','))
-                        line_class = 'fd-line-alert' if value >= fd_threshold else 'fd-line-primary'
+                        line_class = (
+                            'fd-line-alert' if value >= fd_threshold else 'fd-line-primary'
+                        )
                         line_elems.append(
                             f'<line class="{line_class}" x1="{prev_x:.2f}" y1="{prev_y:.2f}" '
                             f'x2="{x_coord:.2f}" y2="{y_coord:.2f}" />'
                         )
 
                 fd_label_y = fd_axis_y_top + (fd_y_range / 2)
+                fd_label_offset = 40
 
                 tick_values = np.linspace(0, fd_max, num=3)
                 tick_length = 6
@@ -296,9 +299,9 @@ class MotionPlot(SimpleInterface):
                         f'<circle id="fd-marker" r="6" cx="{fd_x_start}" cy="{fd_axis_y}" />',
                         f'<text id="fd-value" x="{fd_x_start}" '
                         f'y="{fd_axis_y_top - 12}" aria-live="polite"></text>',
-                        f'<text x="{fd_x_start - 25}" y="{fd_label_y:.2f}" '
+                        f'<text x="{fd_x_start - fd_label_offset}" y="{fd_label_y:.2f}" '
                         'font-size="14" text-anchor="middle" transform='
-                        f'"rotate(-90 {fd_x_start - 25},{fd_label_y:.2f})">'
+                        f'"rotate(-90 {fd_x_start - fd_label_offset},{fd_label_y:.2f})">'
                         'FD (mm)</text>',
                         f'<text x="{(fd_x_start + fd_x_end) / 2:.2f}" '
                         f'y="{fd_axis_y + 35}" font-size="14" text-anchor="middle">'
