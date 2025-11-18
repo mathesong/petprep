@@ -13,20 +13,20 @@ def _write_image(path: Path, shape):
 
 
 def test_motion_plot_builds_svg(tmp_path, monkeypatch):
-    orig_path = _write_image(tmp_path / "orig.nii.gz", (4, 4, 4, 2))
-    corr_path = _write_image(tmp_path / "corr.nii.gz", (4, 4, 4, 2))
+    orig_path = _write_image(tmp_path / 'orig.nii.gz', (4, 4, 4, 2))
+    corr_path = _write_image(tmp_path / 'corr.nii.gz', (4, 4, 4, 2))
 
-    call_count = {"count": 0}
+    call_count = {'count': 0}
 
     def fake_plot_epi(img, **kwargs):
-        height = 10 if call_count["count"] % 2 == 0 else 6
+        height = 10 if call_count['count'] % 2 == 0 else 6
         array = np.ones((height, 8, 3), dtype=np.uint8) * 255
         from imageio import v2 as imageio
 
-        imageio.imwrite(kwargs["output_file"], array)
-        call_count["count"] += 1
+        imageio.imwrite(kwargs['output_file'], array)
+        call_count['count'] += 1
 
-    monkeypatch.setattr("petprep.interfaces.motion.plot_epi", fake_plot_epi)
+    monkeypatch.setattr('petprep.interfaces.motion.plot_epi', fake_plot_epi)
 
     motion = MotionPlot()
     motion.inputs.original_pet = str(orig_path)
@@ -37,13 +37,13 @@ def test_motion_plot_builds_svg(tmp_path, monkeypatch):
     svg_file = Path(result.outputs.svg_file)
 
     content = svg_file.read_text()
-    assert "frame-0" in content
-    assert "animation-delay: 0.05s" in content
-    assert call_count["count"] == 4
+    assert 'frame-0' in content
+    assert 'animation-delay: 0.05s' in content
+    assert call_count['count'] == 4
 
 
 def test_compute_display_params_handles_single_frame(tmp_path):
-    img_path = _write_image(tmp_path / "single.nii.gz", (5, 5, 5))
+    img_path = _write_image(tmp_path / 'single.nii.gz', (5, 5, 5))
 
     motion = MotionPlot()
     mid_img, cut_coords, vmin, vmax = motion._compute_display_params(str(img_path))
