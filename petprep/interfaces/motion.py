@@ -256,6 +256,22 @@ class MotionPlot(SimpleInterface):
 
                 fd_label_y = fd_axis_y_top + (fd_y_range / 2)
 
+                tick_values = np.linspace(0, fd_max, num=3)
+                tick_length = 6
+                tick_elems = []
+                label_elems = []
+                for tick_value in tick_values:
+                    y_coord = fd_axis_y - (tick_value / fd_max) * fd_y_range
+                    tick_elems.append(
+                        f'<line class="fd-axis" x1="{fd_x_start - tick_length}" '
+                        f'x2="{fd_x_start}" y1="{y_coord:.2f}" y2="{y_coord:.2f}" />'
+                    )
+                    label_elems.append(
+                        f'<text x="{fd_x_start - tick_length - 6}" y="{y_coord + 4:.2f}" '
+                        'font-size="12" text-anchor="end">'
+                        f'{tick_value:.2f}</text>'
+                    )
+
                 points_str = ' '.join(points)
 
                 svg_parts.extend(
@@ -265,6 +281,8 @@ class MotionPlot(SimpleInterface):
                         f'y1="{fd_axis_y}" y2="{fd_axis_y}" />',
                         f'<line class="fd-axis" x1="{fd_x_start}" x2="{fd_x_start}" '
                         f'y1="{fd_axis_y_top}" y2="{fd_axis_y}" />',
+                        *tick_elems,
+                        *label_elems,
                         f'<polyline class="fd-line" points="{points_str}" />',
                         *point_elems,
                         f'<circle id="fd-marker" r="6" cx="{fd_x_start}" cy="{fd_axis_y}" />',
