@@ -19,9 +19,9 @@ from nilearn.plotting.find_cuts import find_xyz_cut_coords
 from nipype.interfaces.base import (
     BaseInterfaceInputSpec,
     File,
-    isdefined,
     SimpleInterface,
     TraitedSpec,
+    isdefined,
     traits,
 )
 
