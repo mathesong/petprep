@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import numpy as np
 import nibabel as nb
-from pathlib import Path
 
 from petprep.interfaces.motion import MotionPlot
 
