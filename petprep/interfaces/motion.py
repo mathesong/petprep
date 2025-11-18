@@ -206,7 +206,8 @@ class MotionPlot(SimpleInterface):
                     '}'
                 ),
                 '.playing .frame {animation-play-state: running;}',
-                '.fd-line {fill: none; stroke: #2c7be5; stroke-width: 2;}',
+                '.fd-line-primary {fill: none; stroke: #2c7be5; stroke-width: 2;}',
+                '.fd-line-alert {fill: none; stroke: #d7263d; stroke-width: 2;}',
                 '.fd-axis {stroke: #333; stroke-width: 1;}',
                 '.fd-point {fill: #2c7be5; stroke: white; stroke-width: 1;}',
                 '#fd-marker {fill: #d7263d; stroke: white; stroke-width: 2;}',
@@ -245,6 +246,8 @@ class MotionPlot(SimpleInterface):
                 x_scale = (fd_x_end - fd_x_start) / max(n_frames - 1, 1)
                 points = []
                 point_elems = []
+                line_elems = []
+                fd_threshold = 3.0
                 for idx, value in enumerate(fd_values):
                     x_coord = fd_x_start + x_scale * idx
                     y_coord = fd_axis_y - (value / fd_max) * fd_y_range
@@ -253,6 +256,13 @@ class MotionPlot(SimpleInterface):
                         f'<circle class="fd-point fd-point-{idx}" cx="{x_coord:.2f}" '
                         f'cy="{y_coord:.2f}" r="3" data-value="{value:.6f}" />'
                     )
+                    if idx > 0:
+                        prev_x, prev_y = map(float, points[idx - 1].split(','))
+                        line_class = 'fd-line-alert' if value >= fd_threshold else 'fd-line-primary'
+                        line_elems.append(
+                            f'<line class="{line_class}" x1="{prev_x:.2f}" y1="{prev_y:.2f}" '
+                            f'x2="{x_coord:.2f}" y2="{y_coord:.2f}" />'
+                        )
 
                 fd_label_y = fd_axis_y_top + (fd_y_range / 2)
 
@@ -272,8 +282,6 @@ class MotionPlot(SimpleInterface):
                         f'{tick_value:.2f}</text>'
                     )
 
-                points_str = ' '.join(points)
-
                 svg_parts.extend(
                     [
                         '<g class="fd-plot" aria-label="Framewise displacement">',
@@ -283,7 +291,7 @@ class MotionPlot(SimpleInterface):
                         f'y1="{fd_axis_y_top}" y2="{fd_axis_y}" />',
                         *tick_elems,
                         *label_elems,
-                        f'<polyline class="fd-line" points="{points_str}" />',
+                        *line_elems,
                         *point_elems,
                         f'<circle id="fd-marker" r="6" cx="{fd_x_start}" cy="{fd_axis_y}" />',
                         f'<text id="fd-value" x="{fd_x_start}" '
