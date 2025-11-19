@@ -285,14 +285,14 @@ class MotionPlot(SimpleInterface):
                         f'{tick_value:.1f}</text>'
                     )
 
-                # X-axis ticks showing the frame indices for better readability.
-                x_tick_count = min(n_frames, 6)
+                # X-axis ticks show every other frame (plus the last) to avoid clutter
                 if n_frames <= 1:
                     x_tick_indices = np.array([0])
                 else:
-                    x_tick_indices = np.unique(
-                        np.rint(np.linspace(0, n_frames - 1, num=x_tick_count)).astype(int)
-                    )
+                    tick_stride = 2
+                    x_tick_indices = np.arange(0, n_frames, tick_stride)
+                    if x_tick_indices[-1] != n_frames - 1:
+                        x_tick_indices = np.append(x_tick_indices, n_frames - 1)
 
                 x_tick_length = 6
                 x_tick_elems = []
