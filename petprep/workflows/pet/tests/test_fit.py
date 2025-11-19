@@ -375,7 +375,9 @@ def test_pet_fit_hmc_off_disables_stage1(bids_root: Path, tmp_path: Path):
         hmc_buffer = wf.get_node('hmc_buffer')
         assert str(hmc_buffer.inputs.hmc_xforms).endswith('idmat.tfm')
         petref_buffer = wf.get_node('petref_buffer')
-        assert petref_buffer.inputs.petref.endswith('timeavgref.nii.gz')
+        petref_name = Path(petref_buffer.inputs.petref).name
+        assert petref_name.endswith('_timeavgref.nii.gz')
+        assert '.nii_timeavgref' not in petref_name
         petref_img = nb.load(petref_buffer.inputs.petref)
         assert np.allclose(petref_img.get_fdata(), 14.0 / 6.0)
 

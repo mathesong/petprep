@@ -98,7 +98,13 @@ def _extract_twa_image(
     weighted_average = np.average(data, axis=-1, weights=frame_durations).astype(np.float32)
     hdr.set_data_shape(weighted_average.shape)
 
-    out_file = output_dir / f"{Path(pet_file).stem}_timeavgref.nii.gz"
+    pet_path = Path(pet_file)
+    # Drop all suffixes (e.g., `.nii.gz`) before appending the reference label
+    pet_stem = pet_path
+    while pet_stem.suffix:
+        pet_stem = pet_stem.with_suffix('')
+
+    out_file = output_dir / f"{pet_stem.name}_timeavgref.nii.gz"
     img.__class__(weighted_average, img.affine, hdr).to_filename(out_file)
     return str(out_file)
 
