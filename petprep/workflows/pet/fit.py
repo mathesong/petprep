@@ -27,7 +27,7 @@ import nibabel as nb
 import numpy as np
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
-from nitransforms.linear import Affine
+from nitransforms.linear import Affine, LinearTransformsMapping
 from niworkflows.interfaces.header import ValidateImage
 from niworkflows.utils.connections import listify
 
@@ -107,6 +107,18 @@ def _extract_twa_image(
     out_file = output_dir / f"{pet_stem.name}_timeavgref.nii.gz"
     img.__class__(weighted_average, img.affine, hdr).to_filename(out_file)
     return str(out_file)
+
+
+def _write_identity_xforms(num_frames: int, filename: Path) -> Path:
+    """Write ``num_frames`` identity transforms to ``filename``."""
+
+    filename = Path(filename)
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    n_xforms = max(int(num_frames or 0), 1)
+    LinearTransformsMapping([Affine() for _ in range(n_xforms)]).to_filename(
+        filename, fmt='itk'
+    )
+    return filename
 
 
 def init_pet_fit_wf(
@@ -286,15 +298,13 @@ def init_pet_fit_wf(
             frame_durations,
         )
         idmat_fname = config.execution.work_dir / 'idmat.tfm'
-        Affine().to_filename(idmat_fname, fmt='itk')
-        hmc_xforms = idmat_fname
+        hmc_xforms = _write_identity_xforms(pet_tlen, idmat_fname)
         config.loggers.workflow.info('Head motion correction disabled; using identity transforms.')
 
     if pet_tlen <= 1:  # 3D PET
         petref = pet_file
         idmat_fname = config.execution.work_dir / 'idmat.tfm'
-        Affine().to_filename(idmat_fname, fmt='itk')
-        hmc_xforms = idmat_fname
+        hmc_xforms = _write_identity_xforms(pet_tlen, idmat_fname)
         config.loggers.workflow.debug('3D PET file - motion correction not needed')
     if petref:
         petref_buffer.inputs.petref = petref
