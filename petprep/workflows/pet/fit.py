@@ -115,9 +115,7 @@ def _write_identity_xforms(num_frames: int, filename: Path) -> Path:
     filename = Path(filename)
     filename.parent.mkdir(parents=True, exist_ok=True)
     n_xforms = max(int(num_frames or 0), 1)
-    LinearTransformsMapping([Affine() for _ in range(n_xforms)]).to_filename(
-        filename, fmt='itk'
-    )
+    LinearTransformsMapping([Affine() for _ in range(n_xforms)]).to_filename(filename, fmt='itk')
     return filename
 
 
