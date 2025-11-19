@@ -285,6 +285,30 @@ class MotionPlot(SimpleInterface):
                         f'{tick_value:.1f}</text>'
                     )
 
+                # X-axis ticks showing the frame indices for better readability.
+                x_tick_count = min(n_frames, 6)
+                if n_frames <= 1:
+                    x_tick_indices = np.array([0])
+                else:
+                    x_tick_indices = np.unique(
+                        np.rint(np.linspace(0, n_frames - 1, num=x_tick_count)).astype(int)
+                    )
+
+                x_tick_length = 6
+                x_tick_elems = []
+                x_label_elems = []
+                for tick_idx in x_tick_indices:
+                    x_coord = fd_x_start + x_scale * tick_idx
+                    x_tick_elems.append(
+                        f'<line class="fd-axis" x1="{x_coord:.2f}" x2="{x_coord:.2f}" '
+                        f'y1="{fd_axis_y}" y2="{fd_axis_y + x_tick_length}" />'
+                    )
+                    x_label_elems.append(
+                        f'<text x="{x_coord:.2f}" y="{fd_axis_y + x_tick_length + 14}" '
+                        'font-size="12" text-anchor="middle">'
+                        f'{tick_idx + 1}</text>'
+                    )
+
                 svg_parts.extend(
                     [
                         '<g class="fd-plot" aria-label="Framewise displacement">',
@@ -296,6 +320,8 @@ class MotionPlot(SimpleInterface):
                         *label_elems,
                         *line_elems,
                         *point_elems,
+                        *x_tick_elems,
+                        *x_label_elems,
                         f'<circle id="fd-marker" r="6" cx="{fd_x_start}" cy="{fd_axis_y}" />',
                         f'<text id="fd-value" x="{fd_x_start}" '
                         f'y="{fd_axis_y_top - 12}" aria-live="polite"></text>',
