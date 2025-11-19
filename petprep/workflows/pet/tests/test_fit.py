@@ -350,6 +350,36 @@ def test_pet_fit_stage1_with_cached_baseline(bids_root: Path, tmp_path: Path):
     assert not any(name.startswith('pet_hmc_wf') for name in wf.list_node_names())
 
 
+def test_pet_fit_hmc_off_disables_stage1(bids_root: Path, tmp_path: Path):
+    """Disabling HMC should skip Stage 1 and use identity transforms."""
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    data = np.stack(
+        (
+            np.ones((2, 2, 2), dtype=np.float32),
+            np.full((2, 2, 2), 3.0, dtype=np.float32),
+        ),
+        axis=-1,
+    )
+    img = nb.Nifti1Image(data, np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0, 2], "FrameDuration": [2, 4]}')
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.hmc_off = True
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+        assert not any(name.startswith('pet_hmc_wf') for name in wf.list_node_names())
+        hmc_buffer = wf.get_node('hmc_buffer')
+        assert str(hmc_buffer.inputs.hmc_xforms).endswith('idmat.tfm')
+        petref_buffer = wf.get_node('petref_buffer')
+        assert petref_buffer.inputs.petref.endswith('timeavgref.nii.gz')
+        petref_img = nb.load(petref_buffer.inputs.petref)
+        assert np.allclose(petref_img.get_fdata(), 14.0 / 6.0)
+
+
 def test_init_refmask_report_wf(tmp_path: Path):
     """Ensure the refmask report workflow initializes without errors."""
     wf = init_refmask_report_wf(output_dir=str(tmp_path), ref_name='test')

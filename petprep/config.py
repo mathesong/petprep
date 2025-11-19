@@ -602,6 +602,8 @@ class workflow(_Config):
     """Index of initial frame for head-motion estimation ('auto' selects highest uptake)."""
     hmc_fix_frame: bool = False
     """Whether to fix the reference frame during head-motion estimation."""
+    hmc_off: bool = False
+    """Disable head-motion correction and keep data uncorrected."""
     seg = 'gtm'
     """Segmentation approach ('gtm', 'brainstem', 'thalamicNuclei',
     'hippocampusAmygdala', 'wm', 'raphe', 'limbic')."""
