@@ -296,7 +296,8 @@ def init_pet_fit_wf(
             frame_durations,
         )
         idmat_fname = config.execution.work_dir / 'idmat.tfm'
-        hmc_xforms = _write_identity_xforms(pet_tlen, idmat_fname)
+        n_frames = len(frame_durations)
+        hmc_xforms = _write_identity_xforms(n_frames, idmat_fname)
         config.loggers.workflow.info('Head motion correction disabled; using identity transforms.')
 
     if pet_tlen <= 1:  # 3D PET
