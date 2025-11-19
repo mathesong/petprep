@@ -104,7 +104,7 @@ def _extract_twa_image(
     while pet_stem.suffix:
         pet_stem = pet_stem.with_suffix('')
 
-    out_file = output_dir / f"{pet_stem.name}_timeavgref.nii.gz"
+    out_file = output_dir / f'{pet_stem.name}_timeavgref.nii.gz'
     img.__class__(weighted_average, img.affine, hdr).to_filename(out_file)
     return str(out_file)
 
