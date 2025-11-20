@@ -358,6 +358,12 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '6 degrees (rotation and translation) are used by default.',
     )
     g_conf.add_argument(
+        '--pet2anat-robust',
+        action='store_true',
+        help='Use FreeSurfer mri_robust_register with ROBENT settings for '
+        'PET-to-T1w co-registration. This option is limited to 6 dof.',
+    )
+    g_conf.add_argument(
         '--force-bbr',
         action=DeprecatedAction,
         help='Deprecated - use `--force bbr` instead.',
@@ -745,6 +751,9 @@ def parse_args(args=None, namespace=None):
 
     parser = _build_parser()
     opts = parser.parse_args(args, namespace)
+
+    if getattr(opts, 'pet2anat_robust', False) and opts.pet2anat_dof != 6:
+        parser.error('--pet2anat-robust requires --pet2anat-dof=6.')
 
     if opts.config_file:
         skip = {} if opts.reports_only else {'execution': ('run_uuid',)}

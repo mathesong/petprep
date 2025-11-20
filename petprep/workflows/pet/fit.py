@@ -226,9 +226,15 @@ def init_pet_fit_wf(
             'Please check your BIDS JSON sidecar.'
         )
 
+    registration_method = 'Precomputed'
+    if not petref2anat_xform:
+        registration_method = (
+            'mri_robust_register' if config.workflow.pet2anat_robust else 'mri_coreg'
+        )
+
     summary = pe.Node(
         FunctionalSummary(
-            registration=('Precomputed' if petref2anat_xform else 'mri_coreg'),
+            registration=registration_method,
             registration_dof=config.workflow.pet2anat_dof,
             orientation=orientation,
             metadata=metadata,
@@ -337,6 +343,7 @@ def init_pet_fit_wf(
             pet2anat_dof=config.workflow.pet2anat_dof,
             omp_nthreads=omp_nthreads,
             mem_gb=mem_gb['resampled'],
+            use_robust_register=config.workflow.pet2anat_robust,
             sloppy=config.execution.sloppy,
         )
 

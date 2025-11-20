@@ -41,6 +41,7 @@ def init_pet_reg_wf(
     pet2anat_dof: AffineDOF,
     mem_gb: float,
     omp_nthreads: int,
+    use_robust_register: bool = False,
     name: str = 'pet_reg_wf',
     sloppy: bool = False,
 ):
@@ -69,6 +70,10 @@ def init_pet_reg_wf(
         Size of PET file in GB
     omp_nthreads : :obj:`int`
         Maximum number of threads an individual process may use
+    use_robust_register : :obj:`bool`
+        Run FreeSurfer ``mri_robust_register`` with ROBENT settings for
+        PET-to-anatomical alignment. Only rigid-body (6 dof) alignment is
+        supported in this mode.
     name : :obj:`str`
         Name of workflow (default: ``pet_reg_wf``)
 
@@ -90,7 +95,7 @@ def init_pet_reg_wf(
         Affine transform from anatomical space to PET space (ITK format)
 
     """
-    from nipype.interfaces.freesurfer import MRICoreg
+    from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     from niworkflows.interfaces.nibabel import ApplyMask
     from niworkflows.interfaces.nitransforms import ConcatenateXFMs
@@ -107,26 +112,46 @@ def init_pet_reg_wf(
     )
 
     mask_brain = pe.Node(ApplyMask(), name='mask_brain')
-    mri_coreg = pe.Node(
-        MRICoreg(dof=pet2anat_dof, sep=[4], ftol=0.0001, linmintol=0.01),
-        name='mri_coreg',
-        n_procs=omp_nthreads,
-        mem_gb=5,
-    )
+    if use_robust_register:
+        coreg = pe.Node(
+            RobustRegister(
+                auto_sens=True,
+                est_int_scale=True,
+                init_orient=True,
+                args='--cost ROBENT --entradius 1 --entcorrection',
+                weights_file=True,
+            ),
+            name='mri_robust_register',
+            n_procs=omp_nthreads,
+            mem_gb=5,
+        )
+        coreg_target = 'target_file'
+        coreg_output = 'out_reg_file'
+    else:
+        coreg = pe.Node(
+            MRICoreg(dof=pet2anat_dof, sep=[4], ftol=0.0001, linmintol=0.01),
+            name='mri_coreg',
+            n_procs=omp_nthreads,
+            mem_gb=5,
+        )
+        coreg_target = 'reference_file'
+        coreg_output = 'out_lta_file'
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
 
-    workflow.connect([
+    connections = [
         (inputnode, mask_brain, [
             ('anat_preproc', 'in_file'),
             ('anat_mask', 'in_mask'),
         ]),
-        (inputnode, mri_coreg, [('ref_pet_brain', 'source_file')]),
-        (mask_brain, mri_coreg, [('out_file', 'reference_file')]),
-        (mri_coreg, convert_xfm, [('out_lta_file', 'in_xfms')]),
+        (inputnode, coreg, [('ref_pet_brain', 'source_file')]),
+        (mask_brain, coreg, [('out_file', coreg_target)]),
+        (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
         (convert_xfm, outputnode, [
             ('out_xfm', 'itk_pet_to_t1'),
             ('out_inv', 'itk_t1_to_pet'),
         ]),
-    ])  # fmt:skip
+    ]
+
+    workflow.connect(connections)  # fmt:skip
 
     return workflow
