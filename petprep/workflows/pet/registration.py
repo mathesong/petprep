@@ -115,11 +115,13 @@ def init_pet_reg_wf(
     if use_robust_register:
         coreg = pe.Node(
             RobustRegister(
-                auto_sens=True,
-                est_int_scale=True,
+                auto_sens=False,
+                est_int_scale=False,
                 init_orient=True,
-                args='--cost ROBENT --entradius 1 --entcorrection',
-                weights_file=True,
+                args='--cost NMI',
+                max_iterations=10,
+                high_iterations=20,
+                iteration_thresh=0.01,
             ),
             name='mri_robust_register',
             n_procs=omp_nthreads,
