@@ -71,7 +71,7 @@ def init_pet_reg_wf(
     omp_nthreads : :obj:`int`
         Maximum number of threads an individual process may use
     use_robust_register : :obj:`bool`
-        Run FreeSurfer ``mri_robust_register`` with ROBENT settings for
+        Run FreeSurfer ``mri_robust_register`` with an NMI cost function for
         PET-to-anatomical alignment. Only rigid-body (6 dof) alignment is
         supported in this mode.
     name : :obj:`str`
