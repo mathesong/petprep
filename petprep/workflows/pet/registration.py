@@ -141,17 +141,25 @@ def init_pet_reg_wf(
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
 
     connections = [
-        (inputnode, mask_brain, [
-            ('anat_preproc', 'in_file'),
-            ('anat_mask', 'in_mask'),
-        ]),
+        (
+            inputnode,
+            mask_brain,
+            [
+                ('anat_preproc', 'in_file'),
+                ('anat_mask', 'in_mask'),
+            ],
+        ),
         (inputnode, coreg, [('ref_pet_brain', 'source_file')]),
         (mask_brain, coreg, [('out_file', coreg_target)]),
         (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
-        (convert_xfm, outputnode, [
-            ('out_xfm', 'itk_pet_to_t1'),
-            ('out_inv', 'itk_t1_to_pet'),
-        ]),
+        (
+            convert_xfm,
+            outputnode,
+            [
+                ('out_xfm', 'itk_pet_to_t1'),
+                ('out_inv', 'itk_t1_to_pet'),
+            ],
+        ),
     ]
 
     workflow.connect(connections)  # fmt:skip
