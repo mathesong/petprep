@@ -393,7 +393,7 @@ def test_pet_fit_hmc_off_disables_stage1(bids_root: Path, tmp_path: Path):
         ([0, 1], None, 'Frame timing metadata are required'),
         ([[0, 1]], [1, 1], 'must be one-dimensional'),
         ([0, 1], [1], 'the same length'),
-        ([0, 1], [1, 1, 1], 'match the number of frames'),
+        ([0, 1, 2], [1, 1, 1], 'match the number of frames'),
         ([0, 1], [1, -1], 'must all be positive'),
         ([1, 0], [1, 1], 'must be non-decreasing'),
     ],
