@@ -28,14 +28,12 @@ from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
 from niworkflows.utils.images import dseg_label
-from niworkflows.interfaces.images import RobustAverage
 
 from petprep import config
 from petprep.config import DEFAULT_MEMORY_MIN_GB
 from petprep.interfaces import DerivativesDataSink
 from petprep.interfaces.bids import BIDSURI
 from petprep.interfaces.maths import CropAroundMask
-from petprep.interfaces.resampling import ResampleSeries
 
 
 def prepare_timing_parameters(metadata: dict):
@@ -151,7 +149,6 @@ def init_func_fit_reports_wf(
         'source_file',
         'petref',
         'pet_mask',
-        'motion_xfm',
         'petref2anat_xfm',
         't1w_preproc',
         't1w_mask',
@@ -205,13 +202,6 @@ def init_func_fit_reports_wf(
         )
 
     # Resample anatomical references into PET space for plotting
-    motion_corrected_pet = pe.Node(
-        ResampleSeries(num_threads=config.nipype.omp_nthreads),
-        name='motion_corrected_pet',
-    )
-
-    mean_corrected_pet = pe.Node(RobustAverage(), name='mean_corrected_pet')
-
     t1w_petref = pe.Node(
         ApplyTransforms(
             dimension=3,
@@ -269,12 +259,6 @@ def init_func_fit_reports_wf(
             ('source_file', 'source_file'),
             ('validation_report', 'in_file'),
         ]),
-        (inputnode, motion_corrected_pet, [
-            ('source_file', 'in_file'),
-            ('petref', 'ref_file'),
-            ('motion_xfm', 'transforms'),
-        ]),
-        (motion_corrected_pet, mean_corrected_pet, [('out_file', 'in_file')]),
         (inputnode, t1w_petref, [
             ('t1w_preproc', 'input_image'),
             ('petref', 'reference_image'),
@@ -286,8 +270,7 @@ def init_func_fit_reports_wf(
             ('petref2anat_xfm', 'transforms'),
         ]),
         (t1w_wm, petref_wm, [('out', 'input_image')]),
-        (mean_corrected_pet, crop_petref, [('out_file', 'in_file')]),
-        (inputnode, crop_petref, [('pet_mask', 'mask_file')]),
+        (inputnode, crop_petref, [('petref', 'in_file'), ('pet_mask', 'mask_file')]),
         (t1w_petref, crop_t1w_petref, [('output_image', 'in_file')]),
         (inputnode, crop_t1w_petref, [('pet_mask', 'mask_file')]),
         (petref_wm, crop_petref_wm, [('output_image', 'in_file')]),

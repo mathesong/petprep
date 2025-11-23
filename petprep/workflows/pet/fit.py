@@ -270,7 +270,6 @@ def init_pet_fit_wf(
         (outputnode, func_fit_reports_wf, [
             ('pet_mask', 'inputnode.pet_mask'),
             ('petref2anat_xfm', 'inputnode.petref2anat_xfm'),
-            ('motion_xfm', 'inputnode.motion_xfm'),
         ]),
         (summary, func_fit_reports_wf, [('out_report', 'inputnode.summary_report')]),
     ])  # fmt:skip
