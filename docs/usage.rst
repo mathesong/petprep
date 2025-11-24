@@ -201,10 +201,15 @@ manual) fixed during robust template estimation to improve reproducibility.
 Iterations are automatically disabled to reduce runtime when :option:`--hmc-init-frame-fix` is
 used.
 
+When motion correction is undesirable, use :option:`--hmc-off` to disable head motion
+correction entirely and keep the data unmodified apart from downstream
+processing steps.
+
 Examples: ::
 
     $ petprep /data/bids_root /out participant --hmc-fwhm 8 --hmc-start-time 60
     $ petprep /data/bids_root /out participant --hmc-init-frame 10 --hmc-init-frame-fix
+    $ petprep /data/bids_root /out participant --hmc-off
 
 Anatomical co-registration
 --------------------------
