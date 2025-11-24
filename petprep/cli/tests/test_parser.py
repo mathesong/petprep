@@ -366,3 +366,19 @@ def test_hmc_init_frame_parsing(tmp_path):
     opts = parser.parse_args(base_args + ['--hmc-init-frame', '3', '--hmc-init-frame-fix'])
     assert opts.hmc_init_frame == 3
     assert opts.hmc_fix_frame is True
+
+
+def test_hmc_off_flag(tmp_path):
+    """Ensure disabling motion correction is parsed correctly."""
+    datapath = tmp_path / 'data'
+    outpath = tmp_path / 'out'
+    datapath.mkdir()
+
+    parser = _build_parser()
+    base_args = [str(datapath), str(outpath), 'participant']
+
+    opts = parser.parse_args(base_args)
+    assert opts.hmc_off is False
+
+    opts = parser.parse_args(base_args + ['--hmc-off'])
+    assert opts.hmc_off is True
