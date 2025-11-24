@@ -227,6 +227,7 @@ class SubjectSummary(SummaryInterface):
 class FunctionalSummaryInputSpec(TraitedSpec):
     registration = traits.Enum(
         'mri_coreg',
+        'mri_robust_register',
         'Precomputed',
         mandatory=True,
         desc='PET/anatomical registration method',
@@ -246,8 +247,10 @@ class FunctionalSummary(SummaryInterface):
         # TODO: Add a note about registration_init below?
         if self.inputs.registration == 'Precomputed':
             reg = 'Precomputed affine transformation'
-        else:
+        elif self.inputs.registration == 'mri_coreg':
             reg = f'FreeSurfer <code>mri_coreg</code> - {dof} dof'
+        else:
+            reg = 'FreeSurfer <code>mri_robust_register</code> (ROBENT cost)'
 
         meta = self.inputs.metadata or {}
         time_zero = meta.get('TimeZero', None)

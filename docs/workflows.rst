@@ -427,42 +427,28 @@ Interpolation uses a Lanczos kernel.
 
 PET to T1w registration
 ~~~~~~~~~~~~~~~~~~~~~~~
-:py:func:`~petprep.workflows.pet.registration.init_bbreg_wf`
+:py:func:`~petprep.workflows.pet.registration.init_pet_reg_wf`
 
 .. workflow::
     :graph2use: hierarchical
     :simple_form: yes
 
-    from petprep.workflows.pet.registration import init_bbreg_wf
-    wf = init_bbreg_wf(
+    from petprep.workflows.pet.registration import init_pet_reg_wf
+    wf = init_pet_reg_wf(
         omp_nthreads=1,
-        use_bbr=True,
-        pet2anat_dof=9,
-        pet2anat_init='t2w',
+        pet2anat_dof=6,
+        mem_gb=3,
+        use_robust_register=False,
     )
 
-``pet2anat_init`` selects the initialization strategy for PET-to-anatomical
-registration. The default ``'auto'`` setting uses available metadata to choose
-between header information and intensity-based approaches.
+The PET reference volume is aligned to the skull-stripped anatomical image
+using FreeSurfer's ``mri_coreg`` with the number of degrees of freedom set via
+the :option:`--pet2anat-dof` flag. The resulting affine is converted to ITK
+format for downstream application, along with its inverse.
 
-The alignment between the reference :abbr:`EPI (echo-planar imaging)` image
-of each run and the reconstructed subject using the gray/white matter boundary
-(FreeSurfer's ``?h.white`` surfaces) is calculated by the ``bbregister`` routine.
-See :func:`petprep.workflows.pet.registration.init_bbreg_wf` for further details.
-
-.. figure:: _static/EPIT1Normalization.svg
-
-    Animation showing :abbr:`EPI (echo-planar imaging)` to T1w registration (FreeSurfer ``bbregister``)
-
-If FreeSurfer processing is disabled, FSL ``flirt`` is run with the
-:abbr:`BBR (boundary-based registration)` cost function, using the
-``fast`` segmentation to establish the gray/white matter boundary.
-See :func:`petprep.workflows.pet.registration.init_fsl_bbr_wf` for further details.
-
-After either :abbr:`BBR (boundary-based registration)` workflow is run, the resulting affine
-transform will be compared to the initial transform found by FLIRT.
-Excessive deviation will result in rejecting the BBR refinement and accepting the
-original, affine registration.
+If co-registration proves challenging, the :option:`--pet2anat-robust` flag
+switches the workflow to FreeSurfer's ``mri_robust_register`` with an NMI cost function and restricted
+to rigid-body (6 dof) transforms. This method is more robust to large initial misalignments.
 
 Resampling PET runs onto standard spaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

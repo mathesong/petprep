@@ -74,11 +74,15 @@ def test_subject_summary_handles_missing_task(tmp_path):
     assert 'Task: <none> (1 run)' in segment
 
 
-def test_functional_summary_with_metadata():
+@pytest.mark.parametrize(
+    'registration',
+    ['mri_coreg', 'mri_robust_register'],
+)
+def test_functional_summary_with_metadata(registration):
     from ..reports import FunctionalSummary
 
     summary = FunctionalSummary(
-        registration='mri_coreg',
+        registration=registration,
         registration_dof=6,
         orientation='RAS',
         metadata={
@@ -92,6 +96,7 @@ def test_functional_summary_with_metadata():
     )
 
     segment = summary._generate_segment()
+    assert registration in segment
     assert 'Radiotracer: [11C]DASB' in segment
     assert 'Injected dose: 100 MBq' in segment
     assert 'Number of frames: 2' in segment
