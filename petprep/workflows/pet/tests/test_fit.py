@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import nibabel as nb
+import nitransforms as nt
 import numpy as np
 import pytest
 import yaml
@@ -11,7 +12,7 @@ from .... import config, data
 from ....utils import bids
 from ...tests import mock_config
 from ...tests.test_base import BASE_LAYOUT
-from ..fit import init_pet_fit_wf, init_pet_native_wf
+from ..fit import _extract_twa_image, init_pet_fit_wf, init_pet_native_wf
 from ..outputs import init_refmask_report_wf
 
 
@@ -348,6 +349,108 @@ def test_pet_fit_stage1_with_cached_baseline(bids_root: Path, tmp_path: Path):
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed=precomputed, omp_nthreads=1)
 
     assert not any(name.startswith('pet_hmc_wf') for name in wf.list_node_names())
+
+
+def test_pet_fit_hmc_off_disables_stage1(bids_root: Path, tmp_path: Path):
+    """Disabling HMC should skip Stage 1 and use identity transforms."""
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    data = np.stack(
+        (
+            np.ones((2, 2, 2), dtype=np.float32),
+            np.full((2, 2, 2), 3.0, dtype=np.float32),
+        ),
+        axis=-1,
+    )
+    img = nb.Nifti1Image(data, np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0, 2], "FrameDuration": [2, 4]}')
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.hmc_off = True
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+        assert not any(name.startswith('pet_hmc_wf') for name in wf.list_node_names())
+        hmc_buffer = wf.get_node('hmc_buffer')
+        assert str(hmc_buffer.inputs.hmc_xforms).endswith('idmat.tfm')
+        hmc = nt.linear.load(hmc_buffer.inputs.hmc_xforms)
+        assert hmc.matrix.shape[0] == data.shape[-1]
+        assert np.allclose(hmc.matrix, np.tile(np.eye(4), (data.shape[-1], 1, 1)))
+        petref_buffer = wf.get_node('petref_buffer')
+        petref_name = Path(petref_buffer.inputs.petref).name
+        assert petref_name.endswith('_timeavgref.nii.gz')
+        assert '.nii_timeavgref' not in petref_name
+        petref_img = nb.load(petref_buffer.inputs.petref)
+        assert np.allclose(petref_img.get_fdata(), 14.0 / 6.0)
+
+
+@pytest.mark.parametrize(
+    ('frame_start_times', 'frame_durations', 'message'),
+    [
+        (None, [1, 1], 'Frame timing metadata are required'),
+        ([0, 1], None, 'Frame timing metadata are required'),
+        ([[0, 1]], [1, 1], 'must be one-dimensional'),
+        ([0, 1], [1], 'the same length'),
+        ([0, 1, 2], [1, 1, 1], 'match the number of frames'),
+        ([0, 1], [1, -1], 'must all be positive'),
+        ([1, 0], [1, 1], 'must be non-decreasing'),
+    ],
+)
+def test_extract_twa_image_validation(
+    tmp_path: Path, frame_start_times, frame_durations, message: str
+):
+    """Validate error handling for malformed frame timing metadata."""
+
+    pet_img = nb.Nifti1Image(np.zeros((2, 2, 2, 2), dtype=np.float32), np.eye(4))
+    pet_file = tmp_path / 'pet.nii.gz'
+    pet_img.to_filename(pet_file)
+
+    with pytest.raises(ValueError, match=message):  # noqa: PT011
+        _extract_twa_image(
+            str(pet_file),
+            tmp_path / 'out',
+            frame_start_times,
+            frame_durations,
+        )
+
+
+def test_pet_fit_hmc_off_ignores_precomputed(bids_root: Path, tmp_path: Path):
+    """Precomputed derivatives are ignored when ``--hmc-off`` is set."""
+
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 2.0)), axis=-1)
+    img = nb.Nifti1Image(data, np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0, 1], "FrameDuration": [1, 1]}')
+
+    precomputed_petref = tmp_path / 'precomputed_petref.nii.gz'
+    precomputed_hmc = tmp_path / 'precomputed_hmc.txt'
+    img.to_filename(precomputed_petref)
+    np.savetxt(precomputed_hmc, np.eye(4))
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.hmc_off = True
+        wf = init_pet_fit_wf(
+            pet_series=pet_series,
+            precomputed={
+                'petref': str(precomputed_petref),
+                'transforms': {'hmc': str(precomputed_hmc)},
+            },
+            omp_nthreads=1,
+        )
+
+    petref_buffer = wf.get_node('petref_buffer')
+    hmc_buffer = wf.get_node('hmc_buffer')
+
+    assert petref_buffer.inputs.petref != str(precomputed_petref)
+    assert Path(petref_buffer.inputs.petref).name.endswith('_timeavgref.nii.gz')
+    assert hmc_buffer.inputs.hmc_xforms != str(precomputed_hmc)
+    assert Path(hmc_buffer.inputs.hmc_xforms).name == 'idmat.tfm'
 
 
 def test_init_refmask_report_wf(tmp_path: Path):

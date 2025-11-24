@@ -20,12 +20,14 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
+from collections.abc import Sequence
 from pathlib import Path
 
 import nibabel as nb
+import numpy as np
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
-from nitransforms.linear import Affine
+from nitransforms.linear import Affine, LinearTransformsMapping
 from niworkflows.interfaces.header import ValidateImage
 from niworkflows.utils.connections import listify
 
@@ -51,6 +53,70 @@ from .outputs import (
 from .ref_tacs import init_pet_ref_tacs_wf
 from .reference_mask import init_pet_refmask_wf
 from .registration import init_pet_reg_wf
+
+
+def _extract_twa_image(
+    pet_file: str,
+    output_dir: Path,
+    frame_start_times: Sequence[float] | None,
+    frame_durations: Sequence[float] | None,
+) -> str:
+    """Return a time-weighted average (twa) reference image from a 4D PET series."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    img = nb.load(pet_file)
+    if img.ndim < 4 or img.shape[-1] == 1:
+        return pet_file
+
+    if frame_start_times is None or frame_durations is None:
+        raise ValueError(
+            'Frame timing metadata are required to compute a time-weighted reference image.'
+        )
+
+    frame_start_times = np.asarray(frame_start_times, dtype=float)
+    frame_durations = np.asarray(frame_durations, dtype=float)
+
+    if frame_start_times.ndim != 1 or frame_durations.ndim != 1:
+        raise ValueError('Frame timing metadata must be one-dimensional sequences.')
+
+    if len(frame_start_times) != len(frame_durations):
+        raise ValueError('FrameTimesStart and FrameDuration must have the same length.')
+
+    if len(frame_durations) != img.shape[-1]:
+        raise ValueError(
+            'Frame timing metadata must match the number of frames in the PET series.'
+        )
+
+    if np.any(frame_durations <= 0):
+        raise ValueError('FrameDuration values must all be positive.')
+
+    if np.any(np.diff(frame_start_times) < 0):
+        raise ValueError('FrameTimesStart values must be non-decreasing.')
+
+    hdr = img.header.copy()
+    data = np.asanyarray(img.dataobj)
+    weighted_average = np.average(data, axis=-1, weights=frame_durations).astype(np.float32)
+    hdr.set_data_shape(weighted_average.shape)
+
+    pet_path = Path(pet_file)
+    # Drop all suffixes (e.g., `.nii.gz`) before appending the reference label
+    pet_stem = pet_path
+    while pet_stem.suffix:
+        pet_stem = pet_stem.with_suffix('')
+
+    out_file = output_dir / f'{pet_stem.name}_timeavgref.nii.gz'
+    img.__class__(weighted_average, img.affine, hdr).to_filename(out_file)
+    return str(out_file)
+
+
+def _write_identity_xforms(num_frames: int, filename: Path) -> Path:
+    """Write ``num_frames`` identity transforms to ``filename``."""
+
+    filename = Path(filename)
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    n_xforms = max(int(num_frames or 0), 1)
+    LinearTransformsMapping([Affine() for _ in range(n_xforms)]).to_filename(filename, fmt='itk')
+    return filename
 
 
 def init_pet_fit_wf(
@@ -158,6 +224,13 @@ def init_pet_fit_wf(
     if (petref is None) ^ (hmc_xforms is None):
         raise ValueError("Both 'petref' and 'hmc' transforms must be provided together.")
 
+    if config.workflow.hmc_off and (petref or hmc_xforms):
+        config.loggers.workflow.warning(
+            'Ignoring precomputed motion correction derivatives because --hmc-off was set.'
+        )
+        petref = None
+        hmc_xforms = None
+
     workflow = Workflow(name=name)
 
     inputnode = pe.Node(
@@ -202,19 +275,6 @@ def init_pet_fit_wf(
     )
     hmc_buffer = pe.Node(niu.IdentityInterface(fields=['hmc_xforms']), name='hmc_buffer')
 
-    if pet_tlen <= 1:  # 3D PET
-        petref = pet_file
-        idmat_fname = config.execution.work_dir / 'idmat.tfm'
-        Affine().to_filename(idmat_fname, fmt='itk')
-        hmc_xforms = idmat_fname
-        config.loggers.workflow.debug('3D PET file - motion correction not needed')
-    if petref:
-        petref_buffer.inputs.petref = petref
-        config.loggers.workflow.debug(f'(Re)using motion correction reference: {petref}')
-    if hmc_xforms:
-        hmc_buffer.inputs.hmc_xforms = hmc_xforms
-        config.loggers.workflow.debug(f'(Re)using motion correction transforms: {hmc_xforms}')
-
     timing_parameters = prepare_timing_parameters(metadata)
     frame_durations = timing_parameters.get('FrameDuration')
     frame_start_times = timing_parameters.get('FrameTimesStart')
@@ -225,6 +285,32 @@ def init_pet_fit_wf(
             "'FrameDuration' or 'FrameTimesStart'. "
             'Please check your BIDS JSON sidecar.'
         )
+
+    hmc_disabled = bool(config.workflow.hmc_off)
+    if hmc_disabled:
+        config.execution.work_dir.mkdir(parents=True, exist_ok=True)
+        petref = petref or _extract_twa_image(
+            pet_file,
+            config.execution.work_dir,
+            frame_start_times,
+            frame_durations,
+        )
+        idmat_fname = config.execution.work_dir / 'idmat.tfm'
+        n_frames = len(frame_durations)
+        hmc_xforms = _write_identity_xforms(n_frames, idmat_fname)
+        config.loggers.workflow.info('Head motion correction disabled; using identity transforms.')
+
+    if pet_tlen <= 1:  # 3D PET
+        petref = pet_file
+        idmat_fname = config.execution.work_dir / 'idmat.tfm'
+        hmc_xforms = _write_identity_xforms(pet_tlen, idmat_fname)
+        config.loggers.workflow.debug('3D PET file - motion correction not needed')
+    if petref:
+        petref_buffer.inputs.petref = petref
+        config.loggers.workflow.debug(f'(Re)using motion correction reference: {petref}')
+    if hmc_xforms:
+        hmc_buffer.inputs.hmc_xforms = hmc_xforms
+        config.loggers.workflow.debug(f'(Re)using motion correction transforms: {hmc_xforms}')
 
     summary = pe.Node(
         FunctionalSummary(

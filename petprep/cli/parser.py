@@ -563,6 +563,12 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         action='store_true',
         help=('Keep the chosen initial reference frame fixed during head-motion estimation.'),
     )
+    g_hmc.add_argument(
+        '--hmc-off',
+        dest='hmc_off',
+        action='store_true',
+        help='Disable head-motion correction and use the uncorrected data.',
+    )
 
     g_seg = parser.add_argument_group('Segmentation options')
     g_seg.add_argument(
