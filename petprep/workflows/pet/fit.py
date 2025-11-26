@@ -286,6 +286,29 @@ def init_pet_fit_wf(
             'Please check your BIDS JSON sidecar.'
         )
 
+    use_twa_reference = getattr(config.workflow, 'petref', 'template') == 'twa'
+    corrected_pet_for_report = None
+    twa_reference = None
+
+    if use_twa_reference:
+        corrected_pet_for_report = pe.Node(
+            ResampleSeries(),
+            name='corrected_pet_for_report',
+            n_procs=omp_nthreads,
+            mem_gb=mem_gb['resampled'],
+        )
+        twa_reference = pe.Node(
+            niu.Function(
+                function=_extract_twa_image,
+                input_names=['pet_file', 'output_dir', 'frame_start_times', 'frame_durations'],
+                output_names=['out_file'],
+            ),
+            name='twa_reference',
+        )
+        twa_reference.inputs.output_dir = config.execution.work_dir
+        twa_reference.inputs.frame_start_times = frame_start_times
+        twa_reference.inputs.frame_durations = frame_durations
+
     registration_method = 'Precomputed'
     if not petref2anat_xform:
         registration_method = (
@@ -402,9 +425,19 @@ def init_pet_fit_wf(
             ]),
             (pet_hmc_wf, ds_hmc_wf, [('outputnode.xforms', 'inputnode.xforms')]),
             (ds_hmc_wf, hmc_buffer, [('outputnode.xforms', 'hmc_xforms')]),
-            (pet_hmc_wf, petref_buffer, [('outputnode.petref', 'petref')]),
             (pet_hmc_wf, ds_petref_wf, [('outputnode.petref', 'inputnode.petref')]),
         ])  # fmt:skip
+
+        if use_twa_reference:
+            workflow.connect([
+                (pet_hmc_wf, corrected_pet_for_report, [('outputnode.petref', 'ref_file')]),
+                (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
+                (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
+                (corrected_pet_for_report, twa_reference, [('out_file', 'pet_file')]),
+                (twa_reference, petref_buffer, [('out_file', 'petref')]),
+            ])  # fmt:skip
+        else:
+            workflow.connect([(pet_hmc_wf, petref_buffer, [('outputnode.petref', 'petref')])])
     else:
         config.loggers.workflow.info(
             'PET Stage 1: Found head motion correction transforms and petref - skipping Stage 1'
@@ -418,7 +451,16 @@ def init_pet_fit_wf(
 
         ])  # fmt:skip
         val_pet.inputs.in_file = pet_file
-        petref_buffer.inputs.petref = petref
+        if use_twa_reference:
+            corrected_pet_for_report.inputs.ref_file = petref
+            workflow.connect([
+                (petref_buffer, corrected_pet_for_report, [('pet_file', 'in_file')]),
+                (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
+                (corrected_pet_for_report, twa_reference, [('out_file', 'pet_file')]),
+                (twa_reference, petref_buffer, [('out_file', 'petref')]),
+            ])  # fmt:skip
+        else:
+            petref_buffer.inputs.petref = petref
 
     # Stage 2: Coregistration
     if not petref2anat_xform:

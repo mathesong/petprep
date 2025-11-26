@@ -575,6 +575,16 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         action='store_true',
         help='Disable head-motion correction and use the uncorrected data.',
     )
+    g_hmc.add_argument(
+        '--petref',
+        default='template',
+        choices=['template', 'twa'],
+        help=(
+            "Strategy for generating the PET reference. 'template' uses the "
+            "motion correction template, while 'twa' computes a time-weighted "
+            "average 'twa' of the motion-corrected series."
+        ),
+    )
 
     g_seg = parser.add_argument_group('Segmentation options')
     g_seg.add_argument(

@@ -192,6 +192,31 @@ def test_petref_report_connections(bids_root: Path, tmp_path: Path):
     assert ('petref', 'inputnode.petref') in edge['connect']
 
 
+def test_pet_fit_time_weighted_reference(bids_root: Path, tmp_path: Path):
+    """Selecting a TWA petref adds motion-corrected averaging nodes."""
+
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 2.0)), axis=-1)
+    img = nb.Nifti1Image(data, np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0, 1], "FrameDuration": [1, 1]}')
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.petref = 'twa'
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+    assert 'corrected_pet_for_report' in wf.list_node_names()
+    assert 'twa_reference' in wf.list_node_names()
+
+    petref_buffer = wf.get_node('petref_buffer')
+    twa_reference = wf.get_node('twa_reference')
+    edge = wf._graph.get_edge_data(twa_reference, petref_buffer)
+    assert ('out_file', 'petref') in edge['connect']
+
+
 @pytest.mark.parametrize('pvc_method', [None, 'gtm'])
 def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method):
     """Ensure the reference mask report is passed to the reports workflow."""
