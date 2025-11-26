@@ -66,6 +66,7 @@ def _extract_twa_image(
     from pathlib import Path
 
     import nibabel as nb
+    import numpy as np
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -120,6 +121,7 @@ def _extract_sum_image(pet_file: str, output_dir: 'Path') -> str:
     from pathlib import Path
 
     import nibabel as nb
+    import numpy as np
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
