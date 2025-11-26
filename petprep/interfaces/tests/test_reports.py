@@ -85,6 +85,7 @@ def test_functional_summary_with_metadata(registration):
         registration=registration,
         registration_dof=6,
         orientation='RAS',
+        petref_strategy='template',
         metadata={
             'TracerName': 'DASB',
             'TracerRadionuclide': '[11C]',
@@ -97,6 +98,7 @@ def test_functional_summary_with_metadata(registration):
 
     segment = summary._generate_segment()
     assert registration in segment
+    assert 'Reference image: Motion correction template' in segment
     assert 'Radiotracer: [11C]DASB' in segment
     assert 'Injected dose: 100 MBq' in segment
     assert 'Number of frames: 2' in segment

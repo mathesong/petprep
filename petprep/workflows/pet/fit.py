@@ -309,7 +309,16 @@ def init_pet_fit_wf(
             'Please check your BIDS JSON sidecar.'
         )
 
-    petref_strategy = getattr(config.workflow, 'petref', 'template')
+    requested_petref_strategy = getattr(config.workflow, 'petref', 'template')
+    hmc_disabled = bool(config.workflow.hmc_off)
+    petref_strategy = requested_petref_strategy
+    if hmc_disabled and petref_strategy == 'template':
+        config.loggers.workflow.warning(
+            'Head motion correction disabled (--hmc-off); using a time-weighted average '
+            'reference instead of the motion correction template.'
+        )
+        petref_strategy = 'twa'
+
     use_corrected_reference = petref_strategy in {'twa', 'sum'}
     reference_function = _extract_twa_image
     reference_kwargs: dict[str, object] = {
@@ -354,7 +363,6 @@ def init_pet_fit_wf(
         registration_method = (
             'mri_robust_register' if config.workflow.pet2anat_robust else 'mri_coreg'
         )
-    hmc_disabled = bool(config.workflow.hmc_off)
     if hmc_disabled:
         config.execution.work_dir.mkdir(parents=True, exist_ok=True)
         petref = petref or reference_function(pet_file, **reference_kwargs)
@@ -381,6 +389,9 @@ def init_pet_fit_wf(
             registration_dof=config.workflow.pet2anat_dof,
             orientation=orientation,
             metadata=metadata,
+            petref_strategy=petref_strategy,
+            requested_petref_strategy=requested_petref_strategy,
+            hmc_disabled=hmc_disabled,
         ),
         name='summary',
         mem_gb=config.DEFAULT_MEMORY_MIN_GB,
@@ -489,7 +500,7 @@ def init_pet_fit_wf(
         if use_corrected_reference:
             corrected_pet_for_report.inputs.ref_file = petref
             workflow.connect([
-                (petref_buffer, corrected_pet_for_report, [('pet_file', 'in_file')]),
+                (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
                 (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
                 (corrected_pet_for_report, corrected_reference, [('out_file', 'pet_file')]),
                 (corrected_reference, petref_buffer, [('out_file', 'petref')]),

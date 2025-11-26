@@ -98,6 +98,7 @@ FUNCTIONAL_TEMPLATE = """\
 \t\t<ul class="elem-desc">
 \t\t\t<li>Original orientation: {ornt}</li>
 \t\t\t<li>Registration: {registration}</li>
+\t\t\t<li>Reference image: {reference}</li>
 \t\t\t<li>Time zero: {time_zero}</li>
 \t\t\t<li>Radiotracer: {radiotracer}</li>
 \t\t\t<li>Injected dose: {dose} {dose_units}</li>
@@ -237,6 +238,13 @@ class FunctionalSummaryInputSpec(TraitedSpec):
     )
     orientation = traits.Str(mandatory=True, desc='Orientation of the voxel axes')
     metadata = traits.Dict(desc='PET metadata dictionary')
+    petref_strategy = traits.Enum(
+        'template', 'twa', 'sum', mandatory=True, desc='PET reference generation strategy'
+    )
+    requested_petref_strategy = traits.Enum(
+        'template', 'twa', 'sum', desc='User-requested PET reference strategy'
+    )
+    hmc_disabled = traits.Bool(False, desc='Head motion correction disabled')
 
 
 class FunctionalSummary(SummaryInterface):
@@ -250,7 +258,19 @@ class FunctionalSummary(SummaryInterface):
         elif self.inputs.registration == 'mri_coreg':
             reg = f'FreeSurfer <code>mri_coreg</code> - {dof} dof'
         else:
-            reg = 'FreeSurfer <code>mri_robust_register</code> (ROBENT cost)'
+            reg = 'FreeSurfer <code>mri_robust_register</code> (NMI cost)'
+
+        reference_map = {
+            'template': 'Motion correction template',
+            'twa': 'Time-weighted average of motion-corrected series',
+            'sum': 'Summed motion-corrected series',
+        }
+        petref_strategy = reference_map.get(self.inputs.petref_strategy, 'Unknown')
+        requested = getattr(self.inputs, 'requested_petref_strategy', None)
+        if requested and requested != self.inputs.petref_strategy:
+            petref_strategy += f" (requested '{requested}')"
+        if self.inputs.hmc_disabled:
+            petref_strategy += ' (head motion correction disabled)'
 
         meta = self.inputs.metadata or {}
         time_zero = meta.get('TimeZero', None)
@@ -288,6 +308,7 @@ class FunctionalSummary(SummaryInterface):
 
         return FUNCTIONAL_TEMPLATE.format(
             registration=reg,
+            reference=petref_strategy,
             ornt=self.inputs.orientation,
             # Use the metadata dictionary to fill in the details
             time_zero=time_zero,

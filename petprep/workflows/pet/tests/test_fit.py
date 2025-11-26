@@ -223,6 +223,31 @@ def test_pet_fit_motion_corrected_reference(
     assert ('out_file', 'petref') in edge['connect']
 
 
+def test_petref_default_twa_when_hmc_disabled(bids_root: Path, tmp_path: Path):
+    """Disabling HMC should fall back to TWA references and note it in reports."""
+
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 2.0)), axis=-1)
+    img = nb.Nifti1Image(data, np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0, 1], "FrameDuration": [1, 1]}')
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.hmc_off = True
+        config.workflow.petref = 'template'
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+    assert 'twa_reference' in wf.list_node_names()
+
+    summary = wf.get_node('summary')
+    assert summary.inputs.petref_strategy == 'twa'
+    assert summary.inputs.requested_petref_strategy == 'template'
+    assert summary.inputs.hmc_disabled is True
+
+
 @pytest.mark.parametrize('pvc_method', [None, 'gtm'])
 def test_refmask_report_connections(bids_root: Path, tmp_path: Path, pvc_method):
     """Ensure the reference mask report is passed to the reports workflow."""
