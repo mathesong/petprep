@@ -109,6 +109,29 @@ def _extract_twa_image(
     return str(out_file)
 
 
+def _extract_sum_image(pet_file: str, output_dir: Path) -> str:
+    """Return a summed reference image from a 4D PET series."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    img = nb.load(pet_file)
+    if img.ndim < 4 or img.shape[-1] == 1:
+        return pet_file
+
+    hdr = img.header.copy()
+    data = np.asanyarray(img.dataobj)
+    summed = data.sum(axis=-1, dtype=np.float64).astype(np.float32)
+    hdr.set_data_shape(summed.shape)
+
+    pet_path = Path(pet_file)
+    pet_stem = pet_path
+    while pet_stem.suffix:
+        pet_stem = pet_stem.with_suffix('')
+
+    out_file = output_dir / f'{pet_stem.name}_sumref.nii.gz'
+    img.__class__(summed, img.affine, hdr).to_filename(out_file)
+    return str(out_file)
+
+
 def _write_identity_xforms(num_frames: int, filename: Path) -> Path:
     """Write ``num_frames`` identity transforms to ``filename``."""
 
@@ -286,28 +309,45 @@ def init_pet_fit_wf(
             'Please check your BIDS JSON sidecar.'
         )
 
-    use_twa_reference = getattr(config.workflow, 'petref', 'template') == 'twa'
-    corrected_pet_for_report = None
-    twa_reference = None
+    petref_strategy = getattr(config.workflow, 'petref', 'template')
+    use_corrected_reference = petref_strategy in {'twa', 'sum'}
+    reference_function = _extract_twa_image
+    reference_kwargs: dict[str, object] = {
+        'output_dir': config.execution.work_dir,
+        'frame_start_times': frame_start_times,
+        'frame_durations': frame_durations,
+    }
+    reference_node_name = 'twa_reference'
+    reference_input_names = ['pet_file', 'output_dir', 'frame_start_times', 'frame_durations']
 
-    if use_twa_reference:
+    if petref_strategy == 'sum':
+        reference_function = _extract_sum_image
+        reference_kwargs = {'output_dir': config.execution.work_dir}
+        reference_node_name = 'sum_reference'
+        reference_input_names = ['pet_file', 'output_dir']
+
+    corrected_pet_for_report = None
+    corrected_reference = None
+
+    if use_corrected_reference:
         corrected_pet_for_report = pe.Node(
             ResampleSeries(),
             name='corrected_pet_for_report',
             n_procs=omp_nthreads,
             mem_gb=mem_gb['resampled'],
         )
-        twa_reference = pe.Node(
-            niu.Function(
-                function=_extract_twa_image,
-                input_names=['pet_file', 'output_dir', 'frame_start_times', 'frame_durations'],
+        corrected_reference = pe.Node(
+                niu.Function(
+                function=reference_function,
+                input_names=reference_input_names,
                 output_names=['out_file'],
             ),
-            name='twa_reference',
+            name=reference_node_name,
         )
-        twa_reference.inputs.output_dir = config.execution.work_dir
-        twa_reference.inputs.frame_start_times = frame_start_times
-        twa_reference.inputs.frame_durations = frame_durations
+        corrected_reference.inputs.output_dir = config.execution.work_dir
+        if petref_strategy == 'twa':
+            corrected_reference.inputs.frame_start_times = frame_start_times
+            corrected_reference.inputs.frame_durations = frame_durations
 
     registration_method = 'Precomputed'
     if not petref2anat_xform:
@@ -317,12 +357,7 @@ def init_pet_fit_wf(
     hmc_disabled = bool(config.workflow.hmc_off)
     if hmc_disabled:
         config.execution.work_dir.mkdir(parents=True, exist_ok=True)
-        petref = petref or _extract_twa_image(
-            pet_file,
-            config.execution.work_dir,
-            frame_start_times,
-            frame_durations,
-        )
+        petref = petref or reference_function(pet_file, **reference_kwargs)
         idmat_fname = config.execution.work_dir / 'idmat.tfm'
         n_frames = len(frame_durations)
         hmc_xforms = _write_identity_xforms(n_frames, idmat_fname)
@@ -428,13 +463,13 @@ def init_pet_fit_wf(
             (pet_hmc_wf, ds_petref_wf, [('outputnode.petref', 'inputnode.petref')]),
         ])  # fmt:skip
 
-        if use_twa_reference:
+        if use_corrected_reference:
             workflow.connect([
                 (pet_hmc_wf, corrected_pet_for_report, [('outputnode.petref', 'ref_file')]),
                 (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
                 (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
-                (corrected_pet_for_report, twa_reference, [('out_file', 'pet_file')]),
-                (twa_reference, petref_buffer, [('out_file', 'petref')]),
+                (corrected_pet_for_report, corrected_reference, [('out_file', 'pet_file')]),
+                (corrected_reference, petref_buffer, [('out_file', 'petref')]),
             ])  # fmt:skip
         else:
             workflow.connect([(pet_hmc_wf, petref_buffer, [('outputnode.petref', 'petref')])])
@@ -451,13 +486,13 @@ def init_pet_fit_wf(
 
         ])  # fmt:skip
         val_pet.inputs.in_file = pet_file
-        if use_twa_reference:
+        if use_corrected_reference:
             corrected_pet_for_report.inputs.ref_file = petref
             workflow.connect([
                 (petref_buffer, corrected_pet_for_report, [('pet_file', 'in_file')]),
                 (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
-                (corrected_pet_for_report, twa_reference, [('out_file', 'pet_file')]),
-                (twa_reference, petref_buffer, [('out_file', 'petref')]),
+                (corrected_pet_for_report, corrected_reference, [('out_file', 'pet_file')]),
+                (corrected_reference, petref_buffer, [('out_file', 'petref')]),
             ])  # fmt:skip
         else:
             petref_buffer.inputs.petref = petref

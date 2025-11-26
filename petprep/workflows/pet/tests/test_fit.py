@@ -192,8 +192,14 @@ def test_petref_report_connections(bids_root: Path, tmp_path: Path):
     assert ('petref', 'inputnode.petref') in edge['connect']
 
 
-def test_pet_fit_time_weighted_reference(bids_root: Path, tmp_path: Path):
-    """Selecting a TWA petref adds motion-corrected averaging nodes."""
+@pytest.mark.parametrize(
+    ('petref_mode', 'reference_node'),
+    [('twa', 'twa_reference'), ('sum', 'sum_reference')],
+)
+def test_pet_fit_motion_corrected_reference(
+    bids_root: Path, tmp_path: Path, petref_mode: str, reference_node: str
+):
+    """Selecting a TWA or summed petref adds motion-corrected averaging nodes."""
 
     pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
     data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 2.0)), axis=-1)
@@ -205,15 +211,15 @@ def test_pet_fit_time_weighted_reference(bids_root: Path, tmp_path: Path):
     sidecar.write_text('{"FrameTimesStart": [0, 1], "FrameDuration": [1, 1]}')
 
     with mock_config(bids_dir=bids_root):
-        config.workflow.petref = 'twa'
+        config.workflow.petref = petref_mode
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
 
     assert 'corrected_pet_for_report' in wf.list_node_names()
-    assert 'twa_reference' in wf.list_node_names()
+    assert reference_node in wf.list_node_names()
 
     petref_buffer = wf.get_node('petref_buffer')
-    twa_reference = wf.get_node('twa_reference')
-    edge = wf._graph.get_edge_data(twa_reference, petref_buffer)
+    corrected_reference = wf.get_node(reference_node)
+    edge = wf._graph.get_edge_data(corrected_reference, petref_buffer)
     assert ('out_file', 'petref') in edge['connect']
 
 

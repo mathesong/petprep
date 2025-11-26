@@ -578,11 +578,12 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
     g_hmc.add_argument(
         '--petref',
         default='template',
-        choices=['template', 'twa'],
+        choices=['template', 'twa', 'sum'],
         help=(
             "Strategy for generating the PET reference. 'template' uses the "
             "motion correction template, while 'twa' computes a time-weighted "
-            "average 'twa' of the motion-corrected series."
+            "average and 'sum' produces a summed image of the motion-corrected "
+            'series.'
         ),
     )
 
