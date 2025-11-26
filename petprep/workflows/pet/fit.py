@@ -337,7 +337,7 @@ def init_pet_fit_wf(
             mem_gb=mem_gb['resampled'],
         )
         corrected_reference = pe.Node(
-                niu.Function(
+            niu.Function(
                 function=reference_function,
                 input_names=reference_input_names,
                 output_names=['out_file'],
