@@ -57,9 +57,9 @@ from .registration import init_pet_reg_wf
 
 def _extract_twa_image(
     pet_file: str,
-    output_dir: "Path",
-    frame_start_times: "Sequence[float] | None",
-    frame_durations: "Sequence[float] | None",
+    output_dir: 'Path',
+    frame_start_times: 'Sequence[float] | None',
+    frame_durations: 'Sequence[float] | None',
 ) -> str:
     """Return a time-weighted average (twa) reference image from a 4D PET series."""
 
@@ -68,6 +68,7 @@ def _extract_twa_image(
     import nibabel as nb
     import numpy as np
 
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     img = nb.load(pet_file)
     if img.ndim < 4 or img.shape[-1] == 1:
@@ -114,7 +115,7 @@ def _extract_twa_image(
     return str(out_file)
 
 
-def _extract_sum_image(pet_file: str, output_dir: "Path") -> str:
+def _extract_sum_image(pet_file: str, output_dir: 'Path') -> str:
     """Return a summed reference image from a 4D PET series."""
 
     from pathlib import Path
@@ -122,6 +123,7 @@ def _extract_sum_image(pet_file: str, output_dir: "Path") -> str:
     import nibabel as nb
     import numpy as np
 
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     img = nb.load(pet_file)
     if img.ndim < 4 or img.shape[-1] == 1:
