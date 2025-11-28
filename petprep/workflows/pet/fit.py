@@ -372,9 +372,11 @@ def init_pet_fit_wf(
 
     registration_method = 'Precomputed'
     if not petref2anat_xform:
-        registration_method = (
-            'mri_robust_register' if config.workflow.pet2anat_robust else 'mri_coreg'
-        )
+        registration_method = {
+            'mri_coreg': 'mri_coreg',
+            'robust': 'mri_robust_register',
+            'ants': 'ants_registration',
+        }[config.workflow.pet2anat_method]
     if hmc_disabled:
         config.execution.work_dir.mkdir(parents=True, exist_ok=True)
         petref = petref or reference_function(pet_file, **reference_kwargs)
@@ -528,7 +530,7 @@ def init_pet_fit_wf(
             pet2anat_dof=config.workflow.pet2anat_dof,
             omp_nthreads=omp_nthreads,
             mem_gb=mem_gb['resampled'],
-            use_robust_register=config.workflow.pet2anat_robust,
+            pet2anat_method=config.workflow.pet2anat_method,
             sloppy=config.execution.sloppy,
         )
 

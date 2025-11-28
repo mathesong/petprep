@@ -76,7 +76,7 @@ def test_subject_summary_handles_missing_task(tmp_path):
 
 @pytest.mark.parametrize(
     'registration',
-    ['mri_coreg', 'mri_robust_register'],
+    ['mri_coreg', 'mri_robust_register', 'ants_registration'],
 )
 def test_functional_summary_with_metadata(registration):
     from ..reports import FunctionalSummary

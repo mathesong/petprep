@@ -229,6 +229,7 @@ class FunctionalSummaryInputSpec(TraitedSpec):
     registration = traits.Enum(
         'mri_coreg',
         'mri_robust_register',
+        'ants_registration',
         'Precomputed',
         mandatory=True,
         desc='PET/anatomical registration method',
@@ -257,8 +258,12 @@ class FunctionalSummary(SummaryInterface):
             reg = 'Precomputed affine transformation'
         elif self.inputs.registration == 'mri_coreg':
             reg = f'FreeSurfer <code>mri_coreg</code> - {dof} dof'
-        else:
+        elif self.inputs.registration == 'ants_registration':
+            reg = 'ANTs rigid registration (6 DoF)'
+        elif self.inputs.registration == 'mri_robust_register':
             reg = 'FreeSurfer <code>mri_robust_register</code> (NMI cost)'
+        else:
+            reg = f'Unknown registration method: {self.inputs.registration}'
 
         reference_map = {
             'template': 'Motion correction template',

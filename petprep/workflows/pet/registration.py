@@ -36,12 +36,17 @@ from nipype.pipeline import engine as pe
 AffineDOF = ty.Literal[6, 9, 12]
 
 
+def _get_first(in_list):
+    """Extract first element from a list (for ANTs transform output)."""
+    return in_list[0]
+
+
 def init_pet_reg_wf(
     *,
     pet2anat_dof: AffineDOF,
     mem_gb: float,
     omp_nthreads: int,
-    use_robust_register: bool = False,
+    pet2anat_method: str = 'flirt',
     name: str = 'pet_reg_wf',
     sloppy: bool = False,
 ):
@@ -70,10 +75,10 @@ def init_pet_reg_wf(
         Size of PET file in GB
     omp_nthreads : :obj:`int`
         Maximum number of threads an individual process may use
-    use_robust_register : :obj:`bool`
-        Run FreeSurfer ``mri_robust_register`` with an NMI cost function for
-        PET-to-anatomical alignment. Only rigid-body (6 dof) alignment is
-        supported in this mode.
+    pet2anat_method : :obj:`str`
+        Method for PET-to-anatomical registration. Options are 'flirt' (default,
+        uses FSL FLIRT), 'robust' (uses FreeSurfer mri_robust_register with NMI,
+        6 DoF only), or 'ants' (uses ANTs rigid registration, 6 DoF only).
     name : :obj:`str`
         Name of workflow (default: ``pet_reg_wf``)
 
@@ -95,6 +100,7 @@ def init_pet_reg_wf(
         Affine transform from anatomical space to PET space (ITK format)
 
     """
+    from nipype.interfaces.ants import Registration
     from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     from niworkflows.interfaces.nibabel import ApplyMask
@@ -112,7 +118,43 @@ def init_pet_reg_wf(
     )
 
     mask_brain = pe.Node(ApplyMask(), name='mask_brain')
-    if use_robust_register:
+
+    if pet2anat_method == 'ants':
+        coreg = pe.Node(
+            Registration(
+                dimension=3,
+                float=True,
+                output_transform_prefix='pet2anat_',
+                output_warped_image='pet2anat_Warped.nii.gz',
+                transforms=['Rigid'],
+                transform_parameters=[(0.1,)],
+                metric=['MI'],
+                metric_weight=[1],
+                radius_or_number_of_bins=[32],
+                sampling_strategy=['Regular'],
+                sampling_percentage=[0.25],
+                number_of_iterations=[[1000, 500, 250]],
+                convergence_threshold=[1e-6],
+                convergence_window_size=[10],
+                shrink_factors=[[4, 2, 1]],
+                smoothing_sigmas=[[2, 1, 0]],
+                sigma_units=['vox'],
+                use_histogram_matching=False,
+                initial_moving_transform_com=1,
+                winsorize_lower_quantile=0.005,
+                winsorize_upper_quantile=0.995,
+            ),
+            name='ants_registration',
+            n_procs=omp_nthreads,
+            mem_gb=mem_gb * 2,
+        )
+        coreg_target = 'fixed_image'
+        coreg_mask = 'fixed_image_masks'
+        coreg_moving = 'moving_image'
+        coreg_output = 'forward_transforms'
+        coreg_output_is_list = True
+
+    elif pet2anat_method == 'robust':
         coreg = pe.Node(
             RobustRegister(
                 auto_sens=False,
@@ -128,8 +170,11 @@ def init_pet_reg_wf(
             mem_gb=5,
         )
         coreg_target = 'target_file'
+        coreg_moving = 'source_file'
         coreg_output = 'out_reg_file'
-    else:
+        coreg_output_is_list = False
+
+    else:  # mri_coreg (default)
         coreg = pe.Node(
             MRICoreg(dof=pet2anat_dof, sep=[4], ftol=0.0001, linmintol=0.01),
             name='mri_coreg',
@@ -137,30 +182,63 @@ def init_pet_reg_wf(
             mem_gb=5,
         )
         coreg_target = 'reference_file'
+        coreg_moving = 'source_file'
         coreg_output = 'out_lta_file'
+        coreg_output_is_list = False
+
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
 
-    connections = [
-        (
-            inputnode,
-            mask_brain,
-            [
-                ('anat_preproc', 'in_file'),
-                ('anat_mask', 'in_mask'),
-            ],
-        ),
-        (inputnode, coreg, [('ref_pet_brain', 'source_file')]),
-        (mask_brain, coreg, [('out_file', coreg_target)]),
-        (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
-        (
-            convert_xfm,
-            outputnode,
-            [
-                ('out_xfm', 'itk_pet_to_t1'),
-                ('out_inv', 'itk_t1_to_pet'),
-            ],
-        ),
-    ]
+    # Build connections dynamically based on output type
+    if coreg_output_is_list:
+        # ANTs outputs a list of transforms; take the first (and only) one
+        # ANTs gets unmasked T1W + separate mask (not pre-masked image)
+        connections = [
+            (
+                inputnode,
+                mask_brain,
+                [
+                    ('anat_preproc', 'in_file'),
+                    ('anat_mask', 'in_mask'),
+                ],
+            ),
+            (inputnode, coreg, [
+                ('ref_pet_brain', coreg_moving),
+                ('anat_preproc', coreg_target),
+                ('anat_mask', coreg_mask),
+            ]),
+            (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
+            (
+                convert_xfm,
+                outputnode,
+                [
+                    ('out_xfm', 'itk_pet_to_t1'),
+                    ('out_inv', 'itk_t1_to_pet'),
+                ],
+            ),
+        ]
+    else:
+        # FLIRT and Robust output single transform file
+        connections = [
+            (
+                inputnode,
+                mask_brain,
+                [
+                    ('anat_preproc', 'in_file'),
+                    ('anat_mask', 'in_mask'),
+                ],
+            ),
+            (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
+            (mask_brain, coreg, [('out_file', coreg_target)]),
+            (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
+            (
+                convert_xfm,
+                outputnode,
+                [
+                    ('out_xfm', 'itk_pet_to_t1'),
+                    ('out_inv', 'itk_t1_to_pet'),
+                ],
+            ),
+        ]
 
     workflow.connect(connections)  # fmt:skip
 

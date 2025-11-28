@@ -556,8 +556,8 @@ class workflow(_Config):
     """Degrees of freedom of the PET-to-anatomical registration steps."""
     pet2anat_init = 'auto'
     """Initial transform for PET-to-anatomical registration."""
-    pet2anat_robust = False
-    """Use ``mri_robust_register`` for PET-to-anatomical alignment."""
+    pet2anat_method: str = 'mri_coreg'
+    """PET-to-anatomical registration method (mri_coreg, robust, or ants)."""
     petref: str = 'template'
     """Strategy for building the PET reference (``'template'``, ``'twa'`` or ``'sum'``)."""
     cifti_output = None
