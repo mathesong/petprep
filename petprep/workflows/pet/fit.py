@@ -534,12 +534,14 @@ def init_pet_fit_wf(
         val_pet.inputs.in_file = pet_file
         if use_corrected_reference:
             corrected_pet_for_report.inputs.ref_file = petref
-            workflow.connect([
-                (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
-                (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
-                (corrected_pet_for_report, corrected_reference, [('out_file', 'pet_file')]),
-                (corrected_reference, petref_buffer, [('out_file', 'petref')]),
-            ])  # fmt:skip
+            workflow.connect(
+                [
+                    (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
+                    (hmc_buffer, corrected_pet_for_report, [('hmc_xforms', 'transforms')]),
+                    (corrected_pet_for_report, corrected_reference, [('out_file', 'pet_file')]),
+                    (corrected_reference, petref_buffer, [('out_file', 'petref')]),
+                ]
+            )  # fmt:skip
         else:
             petref_buffer.inputs.petref = petref
 
