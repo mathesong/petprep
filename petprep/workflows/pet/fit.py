@@ -24,7 +24,6 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import nibabel as nb
-import numpy as np
 from nipype.interfaces import utility as niu
 from nipype.pipeline import engine as pe
 from nitransforms.linear import Affine, LinearTransformsMapping
