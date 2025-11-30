@@ -775,9 +775,7 @@ def parse_args(args=None, namespace=None):
 
     # Validate DoF constraints for registration methods
     if opts.pet2anat_method in ('robust', 'ants') and opts.pet2anat_dof != 6:
-        parser.error(
-            f'--pet2anat-method {opts.pet2anat_method} requires --pet2anat-dof=6.'
-        )
+        parser.error(f'--pet2anat-method {opts.pet2anat_method} requires --pet2anat-dof=6.')
 
     if opts.config_file:
         skip = {} if opts.reports_only else {'execution': ('run_uuid',)}
