@@ -201,11 +201,15 @@ def init_pet_reg_wf(
                     ('anat_mask', 'in_mask'),
                 ],
             ),
-            (inputnode, coreg, [
-                ('ref_pet_brain', coreg_moving),
-                ('anat_preproc', coreg_target),
-                ('anat_mask', coreg_mask),
-            ]),
+            (
+                inputnode,
+                coreg,
+                [
+                    ('ref_pet_brain', coreg_moving),
+                    ('anat_preproc', coreg_target),
+                    ('anat_mask', coreg_mask),
+                ],
+            ),
             (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
             (
                 convert_xfm,
