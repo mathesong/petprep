@@ -46,7 +46,7 @@ def init_pet_reg_wf(
     pet2anat_dof: AffineDOF,
     mem_gb: float,
     omp_nthreads: int,
-    pet2anat_method: str = 'flirt',
+    pet2anat_method: str = 'mri_coreg',
     name: str = 'pet_reg_wf',
     sloppy: bool = False,
 ):
@@ -76,9 +76,10 @@ def init_pet_reg_wf(
     omp_nthreads : :obj:`int`
         Maximum number of threads an individual process may use
     pet2anat_method : :obj:`str`
-        Method for PET-to-anatomical registration. Options are 'flirt' (default,
-        uses FSL FLIRT), 'robust' (uses FreeSurfer mri_robust_register with NMI,
-        6 DoF only), or 'ants' (uses ANTs rigid registration, 6 DoF only).
+        Method for PET-to-anatomical registration. Options are 'mri_coreg'
+        (default FreeSurfer co-registration), 'robust' (uses FreeSurfer
+        mri_robust_register with NMI, 6 DoF only), or 'ants' (uses ANTs rigid
+        registration, 6 DoF only).
     name : :obj:`str`
         Name of workflow (default: ``pet_reg_wf``)
 

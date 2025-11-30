@@ -211,16 +211,26 @@ Examples: ::
     $ petprep /data/bids_root /out participant --hmc-init-frame 10 --hmc-init-frame-fix
     $ petprep /data/bids_root /out participant --hmc-off
 
+
+Reference image selection
+-------------------------
+Use :option:`--petref` to control how the reference volume is built from the
+dynamic PET series. ``template`` (default) reuses the motion-correction
+template, providing a consistent target for downstream registration. ``twa``
+computes a time-weighted average, which emphasizes later frames with higher
+counts, while ``sum`` produces a straightforward summed image. When
+:option:`--hmc-off` disables motion correction, requesting ``template``
+automatically falls back to ``twa`` with a warning.
+
 Anatomical co-registration
 --------------------------
 *PETPrep* aligns the PET reference volume to the T1-weighted anatomy before
-deriving downstream outputs. By default, FreeSurfer's ``mri_coreg`` performs
-the alignment, with the :option:`--pet2anat-dof` flag controlling the degrees
-of freedom (rigid-body, 6 dof, is the default). When working with low
-signal-to-noise references or challenging anatomy, the
-:option:`--pet2anat-robust` flag enables ``mri_robust_register`` with an NMI
-cost function to improve robustness. This mode is restricted to rigid-body
-alignment and therefore requires ``--pet2anat-dof 6``.
+deriving downstream outputs. Choose the registration backend with
+:option:`--pet2anat-method`: ``mri_coreg`` (default FreeSurfer co-registration),
+``robust`` (FreeSurfer ``mri_robust_register`` with an NMI cost function), or
+``ants`` (ANTs rigid registration). The :option:`--pet2anat-dof` flag controls
+the degrees of freedom; ``robust`` and ``ants`` are limited to rigid-body
+alignment and therefore require ``--pet2anat-dof 6``.
 
 Segmentation
 ----------------
