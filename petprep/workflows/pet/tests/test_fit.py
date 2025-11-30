@@ -12,7 +12,13 @@ from .... import config, data
 from ....utils import bids
 from ...tests import mock_config
 from ...tests.test_base import BASE_LAYOUT
-from ..fit import _extract_twa_image, init_pet_fit_wf, init_pet_native_wf
+from ..fit import (
+    _extract_sum_image,
+    _extract_twa_image,
+    _write_identity_xforms,
+    init_pet_fit_wf,
+    init_pet_native_wf,
+)
 from ..outputs import init_refmask_report_wf
 
 
@@ -489,6 +495,26 @@ def test_extract_twa_image_validation(
         )
 
 
+def test_extract_sum_image(tmp_path: Path):
+    """Summed references are written out with the expected contents."""
+
+    data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 3.0)), axis=-1)
+    pet_img = nb.Nifti1Image(data.astype(np.float32), np.eye(4))
+    pet_file = tmp_path / 'pet.nii.gz'
+    pet_img.to_filename(pet_file)
+
+    out_file = _extract_sum_image(str(pet_file), tmp_path / 'out')
+
+    summed = nb.load(out_file).get_fdata()
+    assert np.allclose(summed, 4.0)
+    assert Path(out_file).name == 'pet_sumref.nii.gz'
+
+    # 3D inputs should round-trip without creating a new file
+    pet_3d = tmp_path / 'pet3d.nii.gz'
+    nb.Nifti1Image(np.zeros((2, 2, 2), dtype=np.float32), np.eye(4)).to_filename(pet_3d)
+    assert _extract_sum_image(str(pet_3d), tmp_path / 'out') == str(pet_3d)
+
+
 def test_pet_fit_hmc_off_ignores_precomputed(bids_root: Path, tmp_path: Path):
     """Precomputed derivatives are ignored when ``--hmc-off`` is set."""
 
@@ -524,6 +550,20 @@ def test_pet_fit_hmc_off_ignores_precomputed(bids_root: Path, tmp_path: Path):
     assert Path(petref_buffer.inputs.petref).name.endswith('_timeavgref.nii.gz')
     assert hmc_buffer.inputs.hmc_xforms != str(precomputed_hmc)
     assert Path(hmc_buffer.inputs.hmc_xforms).name == 'idmat.tfm'
+
+
+def test_write_identity_xforms_minimum(tmp_path: Path):
+    """At least one identity transform should always be written."""
+
+    xfm_file = _write_identity_xforms(0, tmp_path / 'idmat.tfm')
+
+    xforms = nt.linear.load(xfm_file)
+    matrices = np.asarray(xforms.matrix)
+    if matrices.ndim == 2:
+        matrices = matrices[np.newaxis, ...]
+
+    assert matrices.shape[0] == 1
+    assert np.allclose(matrices[0], np.eye(4))
 
 
 def test_init_refmask_report_wf(tmp_path: Path):
