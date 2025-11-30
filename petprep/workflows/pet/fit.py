@@ -314,15 +314,11 @@ def init_pet_fit_wf(
     frame_start_times = timing_parameters.get('FrameTimesStart')
 
     if frame_durations is None or frame_start_times is None:
-        if pet_tlen <= 1:
-            frame_durations = frame_durations or [1.0]
-            frame_start_times = frame_start_times or [0.0]
-        else:
-            raise ValueError(
-                'Metadata is missing required frame timing information: '
-                "'FrameDuration' or 'FrameTimesStart'. "
-                'Please check your BIDS JSON sidecar.'
-            )
+        raise ValueError(
+            'Metadata is missing required frame timing information: '
+            "'FrameDuration' or 'FrameTimesStart'. "
+            'Please check your BIDS JSON sidecar.'
+        )
 
     requested_petref_strategy = getattr(config.workflow, 'petref', 'template')
     hmc_disabled = bool(config.workflow.hmc_off)
@@ -352,23 +348,29 @@ def init_pet_fit_wf(
 
     corrected_pet_for_report = None
     corrected_reference = None
-    report_pet_for_coreg = pe.Node(
-        ResampleSeries(),
-        name='report_pet_for_coreg',
-        n_procs=omp_nthreads,
-        mem_gb=mem_gb['resampled'],
-    )
-    report_reference = pe.Node(
-        niu.Function(
-            function=_extract_twa_image,
-            input_names=['pet_file', 'output_dir', 'frame_start_times', 'frame_durations'],
-            output_names=['out_file'],
-        ),
-        name='report_twa_reference',
-    )
-    report_reference.inputs.output_dir = config.execution.work_dir
-    report_reference.inputs.frame_start_times = frame_start_times
-    report_reference.inputs.frame_durations = frame_durations
+
+    requires_report_reference = pet_tlen > 1
+    report_pet_for_coreg = None
+    report_pet_reference = None
+
+    if requires_report_reference:
+        report_pet_for_coreg = pe.Node(
+            ResampleSeries(),
+            name='report_pet_for_coreg',
+            n_procs=omp_nthreads,
+            mem_gb=mem_gb['resampled'],
+        )
+        report_pet_reference = pe.Node(
+            niu.Function(
+                function=_extract_twa_image,
+                input_names=reference_input_names,
+                output_names=['out_file'],
+            ),
+            name='report_petref',
+        )
+        report_pet_reference.inputs.output_dir = config.execution.work_dir
+        report_pet_reference.inputs.frame_start_times = frame_start_times
+        report_pet_reference.inputs.frame_durations = frame_durations
 
     if use_corrected_reference:
         corrected_pet_for_report = pe.Node(
@@ -454,6 +456,7 @@ def init_pet_fit_wf(
             ('subjects_dir', 'inputnode.subjects_dir'),
             ('subject_id', 'inputnode.subject_id'),
         ]),
+        (petref_buffer, func_fit_reports_wf, [('petref', 'inputnode.petref')]),
         (outputnode, func_fit_reports_wf, [
             ('pet_mask', 'inputnode.pet_mask'),
             ('petref2anat_xfm', 'inputnode.petref2anat_xfm'),
@@ -499,7 +502,6 @@ def init_pet_fit_wf(
         workflow.connect([
             (val_pet, petref_buffer, [('out_file', 'pet_file')]),
             (val_pet, func_fit_reports_wf, [('out_report', 'inputnode.validation_report')]),
-            (val_pet, report_pet_for_coreg, [('out_file', 'in_file')]),
             (val_pet, pet_hmc_wf, [
                 ('out_file', 'inputnode.pet_file'),
             ]),
@@ -518,6 +520,14 @@ def init_pet_fit_wf(
             ])  # fmt:skip
         else:
             workflow.connect([(pet_hmc_wf, petref_buffer, [('outputnode.petref', 'petref')])])
+
+        if report_pet_reference:
+            workflow.connect([
+                (pet_hmc_wf, report_pet_for_coreg, [('outputnode.petref', 'ref_file')]),
+                (val_pet, report_pet_for_coreg, [('out_file', 'in_file')]),
+                (hmc_buffer, report_pet_for_coreg, [('hmc_xforms', 'transforms')]),
+                (report_pet_for_coreg, report_pet_reference, [('out_file', 'pet_file')]),
+            ])  # fmt:skip
     else:
         config.loggers.workflow.info(
             'PET Stage 1: Found head motion correction transforms and petref - skipping Stage 1'
@@ -528,7 +538,6 @@ def init_pet_fit_wf(
         workflow.connect([
             (val_pet, petref_buffer, [('out_file', 'pet_file')]),
             (val_pet, func_fit_reports_wf, [('out_report', 'inputnode.validation_report')]),
-            (val_pet, report_pet_for_coreg, [('out_file', 'in_file')]),
 
         ])  # fmt:skip
         val_pet.inputs.in_file = pet_file
@@ -545,14 +554,20 @@ def init_pet_fit_wf(
         else:
             petref_buffer.inputs.petref = petref
 
-    workflow.connect(
-        [
-            (petref_buffer, report_pet_for_coreg, [('petref', 'ref_file')]),
-            (hmc_buffer, report_pet_for_coreg, [('hmc_xforms', 'transforms')]),
-            (report_pet_for_coreg, report_reference, [('out_file', 'pet_file')]),
-            (report_reference, func_fit_reports_wf, [('out_file', 'inputnode.petref')]),
-        ]
-    )
+        if report_pet_reference:
+            workflow.connect([
+                (petref_buffer, report_pet_for_coreg, [('petref', 'ref_file')]),
+                (val_pet, report_pet_for_coreg, [('out_file', 'in_file')]),
+                (hmc_buffer, report_pet_for_coreg, [('hmc_xforms', 'transforms')]),
+                (report_pet_for_coreg, report_pet_reference, [('out_file', 'pet_file')]),
+            ])  # fmt:skip
+
+    if report_pet_reference:
+        workflow.connect([
+            (report_pet_reference, func_fit_reports_wf, [('out_file', 'inputnode.report_pet')])
+        ])  # fmt:skip
+    else:
+        func_fit_reports_wf.inputs.inputnode.report_pet = pet_file
 
     # Stage 2: Coregistration
     if not petref2anat_xform:
