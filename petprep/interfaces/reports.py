@@ -259,7 +259,7 @@ class FunctionalSummary(SummaryInterface):
         elif self.inputs.registration == 'mri_coreg':
             reg = f'FreeSurfer <code>mri_coreg</code> - {dof} dof'
         elif self.inputs.registration == 'ants_registration':
-            reg = 'ANTs rigid registration (6 DoF)'
+            reg = f'ANTs <code>ants_registration</code> ({dof} DoF)'
         elif self.inputs.registration == 'mri_robust_register':
             reg = 'FreeSurfer <code>mri_robust_register</code> (NMI cost)'
         else:
