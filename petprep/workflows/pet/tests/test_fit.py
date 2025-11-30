@@ -161,6 +161,9 @@ def test_pet_fit_mask_connections(bids_root: Path, tmp_path: Path):
 
     for path in pet_series:
         img.to_filename(path)
+        Path(path).with_suffix('').with_suffix('.json').write_text(
+            '{"FrameTimesStart": [0], "FrameDuration": [1]}'
+        )
 
     with mock_config(bids_dir=bids_root):
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
@@ -187,9 +190,10 @@ def test_petref_report_connections(bids_root: Path, tmp_path: Path):
     with mock_config(bids_dir=bids_root):
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
 
-    petref_buffer = wf.get_node('petref_buffer')
-    edge = wf._graph.get_edge_data(petref_buffer, wf.get_node('func_fit_reports_wf'))
-    assert ('petref', 'inputnode.petref') in edge['connect']
+    assert 'report_twa_reference' in wf.list_node_names()
+    report_reference = wf.get_node('report_twa_reference')
+    edge = wf._graph.get_edge_data(report_reference, wf.get_node('func_fit_reports_wf'))
+    assert ('out_file', 'inputnode.petref') in edge['connect']
 
 
 @pytest.mark.parametrize(
