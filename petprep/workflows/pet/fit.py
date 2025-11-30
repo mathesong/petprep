@@ -545,12 +545,14 @@ def init_pet_fit_wf(
         else:
             petref_buffer.inputs.petref = petref
 
-    workflow.connect([
-        (petref_buffer, report_pet_for_coreg, [('petref', 'ref_file')]),
-        (hmc_buffer, report_pet_for_coreg, [('hmc_xforms', 'transforms')]),
-        (report_pet_for_coreg, report_reference, [('out_file', 'pet_file')]),
-        (report_reference, func_fit_reports_wf, [('out_file', 'inputnode.petref')]),
-    ])
+    workflow.connect(
+        [
+            (petref_buffer, report_pet_for_coreg, [('petref', 'ref_file')]),
+            (hmc_buffer, report_pet_for_coreg, [('hmc_xforms', 'transforms')]),
+            (report_pet_for_coreg, report_reference, [('out_file', 'pet_file')]),
+            (report_reference, func_fit_reports_wf, [('out_file', 'inputnode.petref')]),
+        ]
+    )
 
     # Stage 2: Coregistration
     if not petref2anat_xform:
