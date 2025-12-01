@@ -245,7 +245,7 @@ class FunctionalSummaryInputSpec(TraitedSpec):
         'sum',
         'first5min',
         mandatory=True,
-        desc='PET reference generation strategy'
+        desc='PET reference generation strategy',
     )
     requested_petref_strategy = traits.Enum(
         'template', 'twa', 'sum', 'first5min', desc='User-requested PET reference strategy'
