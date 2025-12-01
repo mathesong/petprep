@@ -147,7 +147,9 @@ def _extract_first5min_image(
         raise ValueError('FrameTimesStart and FrameDuration must have the same length.')
 
     if len(frame_durations) != img.shape[-1]:
-        raise ValueError('Frame timing metadata must match the number of frames in the PET series.')
+        raise ValueError(
+            'Frame timing metadata must match the number of frames in the PET series.'
+        )
 
     if np.any(frame_durations <= 0):
         raise ValueError('FrameDuration values must all be positive.')
@@ -156,7 +158,9 @@ def _extract_first5min_image(
         raise ValueError('FrameTimesStart values must be non-decreasing.')
 
     frame_ends = frame_start_times + frame_durations
-    included_durations = np.clip(frame_ends, 0.0, window_sec) - np.clip(frame_start_times, 0.0, window_sec)
+    included_durations = np.clip(frame_ends, 0.0, window_sec) - np.clip(
+        frame_start_times, 0.0, window_sec
+    )
 
     if not np.any(included_durations > 0):
         raise ValueError('No frames overlap with the first 5 minutes of the acquisition.')
