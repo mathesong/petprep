@@ -515,6 +515,26 @@ def test_extract_sum_image(tmp_path: Path):
     assert _extract_sum_image(str(pet_3d), tmp_path / 'out') == str(pet_3d)
 
 
+def test_report_petref_receives_frame_metadata(bids_root: Path, tmp_path: Path):
+    """Report reference node always receives timing metadata."""
+
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    img = nb.Nifti1Image(np.zeros((2, 2, 2, 2)), np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+        Path(path).with_suffix('').with_suffix('.json').write_text(
+            '{"FrameTimesStart": [0, 1], "FrameDuration": [1, 1]}'
+        )
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.petref = 'sum'
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+    report_petref = wf.get_node('report_petref')
+    assert report_petref.inputs.frame_start_times == [0, 1]
+    assert report_petref.inputs.frame_durations == [1, 1]
+
+
 def test_pet_fit_hmc_off_ignores_precomputed(bids_root: Path, tmp_path: Path):
     """Precomputed derivatives are ignored when ``--hmc-off`` is set."""
 

@@ -339,6 +339,7 @@ def init_pet_fit_wf(
     }
     reference_node_name = 'twa_reference'
     reference_input_names = ['pet_file', 'output_dir', 'frame_start_times', 'frame_durations']
+    report_reference_input_names = reference_input_names
 
     if petref_strategy == 'sum':
         reference_function = _extract_sum_image
@@ -363,7 +364,7 @@ def init_pet_fit_wf(
         report_pet_reference = pe.Node(
             niu.Function(
                 function=_extract_twa_image,
-                input_names=reference_input_names,
+                input_names=report_reference_input_names,
                 output_names=['out_file'],
             ),
             name='report_petref',
