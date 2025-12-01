@@ -218,7 +218,8 @@ Use :option:`--petref` to control how the reference volume is built from the
 dynamic PET series. ``template`` (default) reuses the motion-correction
 template, providing a consistent target for downstream registration. ``twa``
 computes a time-weighted average, which emphasizes later frames with higher
-counts, while ``sum`` produces a straightforward summed image. When
+counts, ``sum`` produces a straightforward summed image, and ``first5min``
+averages only the first 5 minutes to capture perfusion-like uptake. When
 :option:`--hmc-off` disables motion correction, requesting ``template``
 automatically falls back to ``twa`` with a warning.
 

@@ -114,6 +114,67 @@ def _extract_twa_image(
     return str(out_file)
 
 
+def _extract_first5min_image(
+    pet_file: str,
+    output_dir: 'Path',
+    frame_start_times: 'Sequence[float] | None',
+    frame_durations: 'Sequence[float] | None',
+    window_sec: float = 300.0,
+) -> str:
+    """Average the early (0-``window_sec``) portion of a PET series."""
+
+    from pathlib import Path
+
+    import nibabel as nb
+    import numpy as np
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    img = nb.load(pet_file)
+    if img.ndim < 4 or img.shape[-1] == 1:
+        return pet_file
+
+    if frame_start_times is None or frame_durations is None:
+        raise ValueError('Frame timing metadata are required to compute an early reference image.')
+
+    frame_start_times = np.asarray(frame_start_times, dtype=float)
+    frame_durations = np.asarray(frame_durations, dtype=float)
+
+    if frame_start_times.ndim != 1 or frame_durations.ndim != 1:
+        raise ValueError('Frame timing metadata must be one-dimensional sequences.')
+
+    if len(frame_start_times) != len(frame_durations):
+        raise ValueError('FrameTimesStart and FrameDuration must have the same length.')
+
+    if len(frame_durations) != img.shape[-1]:
+        raise ValueError('Frame timing metadata must match the number of frames in the PET series.')
+
+    if np.any(frame_durations <= 0):
+        raise ValueError('FrameDuration values must all be positive.')
+
+    if np.any(np.diff(frame_start_times) < 0):
+        raise ValueError('FrameTimesStart values must be non-decreasing.')
+
+    frame_ends = frame_start_times + frame_durations
+    included_durations = np.clip(frame_ends, 0.0, window_sec) - np.clip(frame_start_times, 0.0, window_sec)
+
+    if not np.any(included_durations > 0):
+        raise ValueError('No frames overlap with the first 5 minutes of the acquisition.')
+
+    hdr = img.header.copy()
+    data = np.asanyarray(img.dataobj)
+    weighted_average = np.average(data, axis=-1, weights=included_durations).astype(np.float32)
+    hdr.set_data_shape(weighted_average.shape)
+
+    pet_path = Path(pet_file)
+    while pet_path.suffix:
+        pet_path = pet_path.with_suffix('')
+
+    out_file = output_dir / f'{pet_path.name}_first5minref.nii.gz'
+    img.__class__(weighted_average, img.affine, hdr).to_filename(out_file)
+    return str(out_file)
+
+
 def _extract_sum_image(pet_file: str, output_dir: 'Path') -> str:
     """Return a summed reference image from a 4D PET series."""
 
@@ -330,7 +391,7 @@ def init_pet_fit_wf(
         )
         petref_strategy = 'twa'
 
-    use_corrected_reference = petref_strategy in {'twa', 'sum'}
+    use_corrected_reference = petref_strategy in {'twa', 'sum', 'first5min'}
     reference_function = _extract_twa_image
     reference_kwargs: dict[str, object] = {
         'output_dir': config.execution.work_dir,
@@ -346,6 +407,10 @@ def init_pet_fit_wf(
         reference_kwargs = {'output_dir': config.execution.work_dir}
         reference_node_name = 'sum_reference'
         reference_input_names = ['pet_file', 'output_dir']
+
+    if petref_strategy == 'first5min':
+        reference_function = _extract_first5min_image
+        reference_node_name = 'first5min_reference'
 
     corrected_pet_for_report = None
     corrected_reference = None
@@ -389,7 +454,7 @@ def init_pet_fit_wf(
             name=reference_node_name,
         )
         corrected_reference.inputs.output_dir = config.execution.work_dir
-        if petref_strategy == 'twa':
+        if petref_strategy in {'twa', 'first5min'}:
             corrected_reference.inputs.frame_start_times = frame_start_times
             corrected_reference.inputs.frame_durations = frame_durations
 

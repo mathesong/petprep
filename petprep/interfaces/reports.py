@@ -240,10 +240,10 @@ class FunctionalSummaryInputSpec(TraitedSpec):
     orientation = traits.Str(mandatory=True, desc='Orientation of the voxel axes')
     metadata = traits.Dict(desc='PET metadata dictionary')
     petref_strategy = traits.Enum(
-        'template', 'twa', 'sum', mandatory=True, desc='PET reference generation strategy'
+        'template', 'twa', 'sum', 'first5min', mandatory=True, desc='PET reference generation strategy'
     )
     requested_petref_strategy = traits.Enum(
-        'template', 'twa', 'sum', desc='User-requested PET reference strategy'
+        'template', 'twa', 'sum', 'first5min', desc='User-requested PET reference strategy'
     )
     hmc_disabled = traits.Bool(False, desc='Head motion correction disabled')
 
@@ -269,6 +269,7 @@ class FunctionalSummary(SummaryInterface):
             'template': 'Motion correction template',
             'twa': 'Time-weighted average of motion-corrected series',
             'sum': 'Summed motion-corrected series',
+            'first5min': 'Early (0-5 minute) average of motion-corrected series',
         }
         petref_strategy = reference_map.get(self.inputs.petref_strategy, 'Unknown')
         requested = getattr(self.inputs, 'requested_petref_strategy', None)

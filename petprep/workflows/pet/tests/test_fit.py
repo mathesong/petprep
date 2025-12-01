@@ -13,6 +13,7 @@ from ....utils import bids
 from ...tests import mock_config
 from ...tests.test_base import BASE_LAYOUT
 from ..fit import (
+    _extract_first5min_image,
     _extract_sum_image,
     _extract_twa_image,
     _write_identity_xforms,
@@ -513,6 +514,27 @@ def test_extract_sum_image(tmp_path: Path):
     pet_3d = tmp_path / 'pet3d.nii.gz'
     nb.Nifti1Image(np.zeros((2, 2, 2), dtype=np.float32), np.eye(4)).to_filename(pet_3d)
     assert _extract_sum_image(str(pet_3d), tmp_path / 'out') == str(pet_3d)
+
+
+def test_extract_first5min_image(tmp_path: Path):
+    """Early reference averages only the first 5 minutes of data."""
+
+    data = np.stack((np.ones((2, 2, 2)), np.full((2, 2, 2), 3.0)), axis=-1)
+    pet_img = nb.Nifti1Image(data.astype(np.float32), np.eye(4))
+    pet_file = tmp_path / 'pet.nii.gz'
+    pet_img.to_filename(pet_file)
+
+    out_file = _extract_first5min_image(
+        str(pet_file),
+        tmp_path / 'out',
+        frame_start_times=[0, 400],
+        frame_durations=[400, 200],
+    )
+
+    averaged = nb.load(out_file).get_fdata()
+    expected = (1.0 * 300 + 3.0 * 0) / 300
+    assert np.allclose(averaged, expected)
+    assert Path(out_file).name == 'pet_first5minref.nii.gz'
 
 
 def test_report_petref_receives_frame_metadata(bids_root: Path, tmp_path: Path):
