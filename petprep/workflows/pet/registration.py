@@ -103,6 +103,7 @@ def init_pet_reg_wf(
     """
     from nipype.interfaces.ants import Registration
     from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
+    from nipype.interfaces.fsl import FLIRT, RobustFOV
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     from niworkflows.interfaces.nibabel import ApplyMask
     from niworkflows.interfaces.nitransforms import ConcatenateXFMs
@@ -119,6 +120,11 @@ def init_pet_reg_wf(
     )
 
     mask_brain = pe.Node(ApplyMask(), name='mask_brain')
+    crop_anat_mask = pe.Node(
+        FLIRT(apply_xfm=True, interp='nearestneighbour', output_type='NIFTI_GZ'),
+        name='crop_anat_mask',
+    )
+    robust_fov = pe.Node(RobustFOV(output_type='NIFTI_GZ'), name='robust_fov')
 
     if pet2anat_method == 'ants':
         coreg = pe.Node(
@@ -194,23 +200,17 @@ def init_pet_reg_wf(
         # ANTs outputs a list of transforms; take the first (and only) one
         # ANTs gets unmasked T1W + separate mask (not pre-masked image)
         connections = [
+            (robust_fov, mask_brain, [('out_roi', 'in_file')]),
+            (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
+            (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
             (
-                inputnode,
-                mask_brain,
-                [
-                    ('anat_preproc', 'in_file'),
-                    ('anat_mask', 'in_mask'),
-                ],
-            ),
-            (
-                inputnode,
+                robust_fov,
                 coreg,
                 [
-                    ('ref_pet_brain', coreg_moving),
-                    ('anat_preproc', coreg_target),
-                    ('anat_mask', coreg_mask),
+                    ('out_roi', coreg_target),
                 ],
             ),
+            (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
             (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
             (
                 convert_xfm,
@@ -224,14 +224,8 @@ def init_pet_reg_wf(
     else:
         # FLIRT and Robust output single transform file
         connections = [
-            (
-                inputnode,
-                mask_brain,
-                [
-                    ('anat_preproc', 'in_file'),
-                    ('anat_mask', 'in_mask'),
-                ],
-            ),
+            (robust_fov, mask_brain, [('out_roi', 'in_file')]),
+            (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
             (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
             (mask_brain, coreg, [('out_file', coreg_target)]),
             (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
@@ -245,6 +239,13 @@ def init_pet_reg_wf(
             ),
         ]
 
-    workflow.connect(connections)  # fmt:skip
+    workflow.connect(
+        [
+            (inputnode, robust_fov, [('anat_preproc', 'in_file')]),
+            (inputnode, crop_anat_mask, [('anat_mask', 'in_file')]),
+            (robust_fov, crop_anat_mask, [('out_roi', 'reference'), ('out_transform', 'in_matrix_file')]),
+        ]
+        + connections
+    )  # fmt:skip
 
     return workflow
