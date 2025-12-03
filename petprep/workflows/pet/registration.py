@@ -41,6 +41,71 @@ def _get_first(in_list):
     return in_list[0]
 
 
+def _fsl2itk(fsl_matrix, source_file, reference_file):
+    """
+    Convert FSL FLIRT matrix to ITK format.
+
+    Parameters
+    ----------
+    fsl_matrix : str
+        Path to FSL .mat file
+    source_file : str
+        Source image (the image that was transformed)
+    reference_file : str
+        Reference image (the target space)
+
+    Returns
+    -------
+    str
+        Path to ITK transform file
+    """
+    import os
+    import numpy as np
+    import nibabel as nb
+    from pathlib import Path
+
+    # Load images to get headers
+    src_img = nb.load(source_file)
+    ref_img = nb.load(reference_file)
+
+    # Load FSL matrix
+    fsl_xfm = np.loadtxt(fsl_matrix)
+
+    # Get voxel-to-RAS matrices
+    src_vox2ras = src_img.affine
+    ref_vox2ras = ref_img.affine
+
+    # Convert FSL (voxel-to-voxel) to RAS-to-RAS
+    # FSL: vox_ref = M * vox_src
+    # ITK: ras_ref = T * ras_src
+    # T = ref_vox2ras * M * inv(src_vox2ras)
+    itk_xfm = ref_vox2ras @ fsl_xfm @ np.linalg.inv(src_vox2ras)
+
+    # ITK uses the inverse convention (from reference to source)
+    itk_xfm = np.linalg.inv(itk_xfm)
+
+    # Write ITK format transform (simple affine text format)
+    out_file = os.path.join(os.getcwd(), 'fsl2itk_transform.txt')
+
+    # Write in ITK format (12 parameters: 9 rotation/scale + 3 translation)
+    with open(out_file, 'w') as f:
+        f.write('#Insight Transform File V1.0\n')
+        f.write('#Transform 0\n')
+        f.write('Transform: AffineTransform_double_3_3\n')
+        f.write('Parameters: ')
+        # ITK order: first 9 are the matrix (row-major), last 3 are translation
+        params = []
+        for i in range(3):
+            for j in range(3):
+                params.append(str(itk_xfm[i, j]))
+        for i in range(3):
+            params.append(str(itk_xfm[i, 3]))
+        f.write(' '.join(params) + '\n')
+        f.write('FixedParameters: 0 0 0\n')
+
+    return out_file
+
+
 def init_pet_reg_wf(
     *,
     pet2anat_dof: AffineDOF,
@@ -102,7 +167,6 @@ def init_pet_reg_wf(
 
     """
     from nipype.interfaces.ants import Registration
-    from nipype.interfaces.c3 import C3dAffineTool
     from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
     from nipype.interfaces.fsl import FLIRT, RobustFOV
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
@@ -130,7 +194,11 @@ def init_pet_reg_wf(
     # Convert robustFOV transform (FSL matrix) to ITK format
     # robustFOV outputs: original_T1w -> cropped_T1w
     fsl2itk = pe.Node(
-        C3dAffineTool(fsl2ras=True, itk_transform=True),
+        niu.Function(
+            input_names=['fsl_matrix', 'source_file', 'reference_file'],
+            output_names=['out_file'],
+            function=_fsl2itk,
+        ),
         name='fsl2itk',
     )
 
@@ -207,8 +275,11 @@ def init_pet_reg_wf(
         coreg_output = 'out_lta_file'
         coreg_output_is_list = False
 
-    # Concatenate: [inv(robustFOV), registration] = [cropped->original, PET->cropped]
+    # Merge transforms into a list: [inv(robustFOV), registration] = [cropped->original, PET->cropped]
     # ITK applies right-to-left: PET->cropped first, then cropped->original = PET->original
+    merge_xfms = pe.Node(niu.Merge(2), name='merge_xfms')
+
+    # Concatenate the transforms
     concat_xfm = pe.Node(ConcatenateXFMs(inverse=False), name='concat_xfm')
 
     # Get inverse for original_T1w -> PET
@@ -233,14 +304,16 @@ def init_pet_reg_wf(
             ),
             (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
             # Convert FSL robustFOV transform (original->cropped) to ITK format
-            (robust_fov, fsl2itk, [('out_transform', 'transform_file')]),
+            (robust_fov, fsl2itk, [('out_transform', 'fsl_matrix')]),
             (inputnode, fsl2itk, [('anat_preproc', 'source_file')]),  # original T1w
             (robust_fov, fsl2itk, [('out_roi', 'reference_file')]),  # cropped T1w
             # Invert robustFOV: original->cropped becomes cropped->original
-            (fsl2itk, invert_crop_xfm, [('itk_transform', 'in_xfms')]),
-            # Concatenate: [cropped->original, PET->cropped] applied right-to-left
-            (invert_crop_xfm, concat_xfm, [('out_xfm', 'in_xfms')]),  # cropped->original
-            (coreg, concat_xfm, [((coreg_output, _get_first), 'in_xfms2')]),  # PET->cropped
+            (fsl2itk, invert_crop_xfm, [('out_file', 'in_xfms')]),
+            # Merge transforms into list: [cropped->original, PET->cropped]
+            (invert_crop_xfm, merge_xfms, [('out_xfm', 'in1')]),  # cropped->original
+            (coreg, merge_xfms, [((coreg_output, _get_first), 'in2')]),  # PET->cropped
+            # Concatenate the merged transforms
+            (merge_xfms, concat_xfm, [('out', 'in_xfms')]),
             # Result: PET->original. Get forward and inverse
             (concat_xfm, convert_xfm, [('out_xfm', 'in_xfms')]),
             (
@@ -261,14 +334,16 @@ def init_pet_reg_wf(
             (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
             (mask_brain, coreg, [('out_file', coreg_target)]),  # Uses cropped brain
             # Convert FSL robustFOV transform (original->cropped) to ITK format
-            (robust_fov, fsl2itk, [('out_transform', 'transform_file')]),
+            (robust_fov, fsl2itk, [('out_transform', 'fsl_matrix')]),
             (inputnode, fsl2itk, [('anat_preproc', 'source_file')]),  # original T1w
             (robust_fov, fsl2itk, [('out_roi', 'reference_file')]),  # cropped T1w
             # Invert robustFOV: original->cropped becomes cropped->original
-            (fsl2itk, invert_crop_xfm, [('itk_transform', 'in_xfms')]),
-            # Concatenate: [cropped->original, PET->cropped] applied right-to-left
-            (invert_crop_xfm, concat_xfm, [('out_xfm', 'in_xfms')]),  # cropped->original
-            (coreg, concat_xfm, [(coreg_output, 'in_xfms2')]),  # PET->cropped
+            (fsl2itk, invert_crop_xfm, [('out_file', 'in_xfms')]),
+            # Merge transforms into list: [cropped->original, PET->cropped]
+            (invert_crop_xfm, merge_xfms, [('out_xfm', 'in1')]),  # cropped->original
+            (coreg, merge_xfms, [(coreg_output, 'in2')]),  # PET->cropped
+            # Concatenate the merged transforms
+            (merge_xfms, concat_xfm, [('out', 'in_xfms')]),
             # Result: PET->original. Get forward and inverse
             (concat_xfm, convert_xfm, [('out_xfm', 'in_xfms')]),
             (
