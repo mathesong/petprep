@@ -102,6 +102,7 @@ def init_pet_reg_wf(
 
     """
     from nipype.interfaces.ants import Registration
+    from nipype.interfaces.c3 import C3dAffineTool
     from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
     from nipype.interfaces.fsl import FLIRT, RobustFOV
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
@@ -125,6 +126,19 @@ def init_pet_reg_wf(
         name='crop_anat_mask',
     )
     robust_fov = pe.Node(RobustFOV(output_type='NIFTI_GZ'), name='robust_fov')
+
+    # Convert robustFOV transform (FSL matrix) to ITK format
+    # robustFOV outputs: original_T1w -> cropped_T1w
+    fsl2itk = pe.Node(
+        C3dAffineTool(fsl2ras=True, itk_transform=True),
+        name='fsl2itk',
+    )
+
+    # Invert robustFOV transform to get: cropped_T1w -> original_T1w
+    invert_crop_xfm = pe.Node(
+        ConcatenateXFMs(inverse=True),
+        name='invert_crop_xfm',
+    )
 
     if pet2anat_method == 'ants':
         coreg = pe.Node(
@@ -193,12 +207,19 @@ def init_pet_reg_wf(
         coreg_output = 'out_lta_file'
         coreg_output_is_list = False
 
+    # Concatenate: [inv(robustFOV), registration] = [cropped->original, PET->cropped]
+    # ITK applies right-to-left: PET->cropped first, then cropped->original = PET->original
+    concat_xfm = pe.Node(ConcatenateXFMs(inverse=False), name='concat_xfm')
+
+    # Get inverse for original_T1w -> PET
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
 
     # Build connections dynamically based on output type
     if coreg_output_is_list:
         # ANTs outputs a list of transforms; take the first (and only) one
         # ANTs gets unmasked T1W + separate mask (not pre-masked image)
+        # ANTs computes: PET -> cropped_T1w
+        # Need to concatenate with inverse of robustFOV to get: PET -> original_T1w
         connections = [
             (robust_fov, mask_brain, [('out_roi', 'in_file')]),
             (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
@@ -211,30 +232,51 @@ def init_pet_reg_wf(
                 ],
             ),
             (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
-            (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
+            # Convert FSL robustFOV transform (original->cropped) to ITK format
+            (robust_fov, fsl2itk, [('out_transform', 'transform_file')]),
+            (inputnode, fsl2itk, [('anat_preproc', 'source_file')]),  # original T1w
+            (robust_fov, fsl2itk, [('out_roi', 'reference_file')]),  # cropped T1w
+            # Invert robustFOV: original->cropped becomes cropped->original
+            (fsl2itk, invert_crop_xfm, [('itk_transform', 'in_xfms')]),
+            # Concatenate: [cropped->original, PET->cropped] applied right-to-left
+            (invert_crop_xfm, concat_xfm, [('out_xfm', 'in_xfms')]),  # cropped->original
+            (coreg, concat_xfm, [((coreg_output, _get_first), 'in_xfms2')]),  # PET->cropped
+            # Result: PET->original. Get forward and inverse
+            (concat_xfm, convert_xfm, [('out_xfm', 'in_xfms')]),
             (
                 convert_xfm,
                 outputnode,
                 [
-                    ('out_xfm', 'itk_pet_to_t1'),
-                    ('out_inv', 'itk_t1_to_pet'),
+                    ('out_xfm', 'itk_pet_to_t1'),  # PET -> original_T1w
+                    ('out_inv', 'itk_t1_to_pet'),  # original_T1w -> PET
                 ],
             ),
         ]
     else:
-        # FLIRT and Robust output single transform file
+        # mri_coreg and robust output single transform file
+        # They also register to cropped+masked brain, so need concatenation
         connections = [
             (robust_fov, mask_brain, [('out_roi', 'in_file')]),
             (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
             (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
-            (mask_brain, coreg, [('out_file', coreg_target)]),
-            (coreg, convert_xfm, [(coreg_output, 'in_xfms')]),
+            (mask_brain, coreg, [('out_file', coreg_target)]),  # Uses cropped brain
+            # Convert FSL robustFOV transform (original->cropped) to ITK format
+            (robust_fov, fsl2itk, [('out_transform', 'transform_file')]),
+            (inputnode, fsl2itk, [('anat_preproc', 'source_file')]),  # original T1w
+            (robust_fov, fsl2itk, [('out_roi', 'reference_file')]),  # cropped T1w
+            # Invert robustFOV: original->cropped becomes cropped->original
+            (fsl2itk, invert_crop_xfm, [('itk_transform', 'in_xfms')]),
+            # Concatenate: [cropped->original, PET->cropped] applied right-to-left
+            (invert_crop_xfm, concat_xfm, [('out_xfm', 'in_xfms')]),  # cropped->original
+            (coreg, concat_xfm, [(coreg_output, 'in_xfms2')]),  # PET->cropped
+            # Result: PET->original. Get forward and inverse
+            (concat_xfm, convert_xfm, [('out_xfm', 'in_xfms')]),
             (
                 convert_xfm,
                 outputnode,
                 [
-                    ('out_xfm', 'itk_pet_to_t1'),
-                    ('out_inv', 'itk_t1_to_pet'),
+                    ('out_xfm', 'itk_pet_to_t1'),  # PET -> original_T1w
+                    ('out_inv', 'itk_t1_to_pet'),  # original_T1w -> PET
                 ],
             ),
         ]
