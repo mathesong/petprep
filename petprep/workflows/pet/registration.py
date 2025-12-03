@@ -102,8 +102,8 @@ def init_pet_reg_wf(
 
     """
     from nipype.interfaces.ants import Registration
-    from nipype.interfaces.freesurfer import MRICoreg, RobustRegister
-    from nipype.interfaces.fsl import FLIRT, RobustFOV
+    from nipype.interfaces.freesurfer import MRIConvert, MRICoreg, RobustRegister
+    from nipype.interfaces.fsl import RobustFOV
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
     from niworkflows.interfaces.nibabel import ApplyMask
     from niworkflows.interfaces.nitransforms import ConcatenateXFMs
@@ -120,10 +120,7 @@ def init_pet_reg_wf(
     )
 
     mask_brain = pe.Node(ApplyMask(), name='mask_brain')
-    crop_anat_mask = pe.Node(
-        FLIRT(apply_xfm=True, interp='nearestneighbour', output_type='NIFTI_GZ'),
-        name='crop_anat_mask',
-    )
+    crop_anat_mask = pe.Node(MRIConvert(out_type='niigz'), name='crop_anat_mask')
     robust_fov = pe.Node(RobustFOV(output_type='NIFTI_GZ'), name='robust_fov')
 
     if pet2anat_method == 'ants':
@@ -222,7 +219,7 @@ def init_pet_reg_wf(
             ),
         ]
     else:
-        # FLIRT and Robust output single transform file
+        # mri_coreg and mri_robust_register output single transform file
         connections = [
             (robust_fov, mask_brain, [('out_roi', 'in_file')]),
             (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
@@ -243,7 +240,7 @@ def init_pet_reg_wf(
         [
             (inputnode, robust_fov, [('anat_preproc', 'in_file')]),
             (inputnode, crop_anat_mask, [('anat_mask', 'in_file')]),
-            (robust_fov, crop_anat_mask, [('out_roi', 'reference'), ('out_transform', 'in_matrix_file')]),
+            (robust_fov, crop_anat_mask, [('out_roi', 'reslice_like')]),
         ]
         + connections
     )  # fmt:skip
