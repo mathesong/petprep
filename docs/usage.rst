@@ -215,23 +215,33 @@ Examples: ::
 Reference image selection
 -------------------------
 Use :option:`--petref` to control how the reference volume is built from the
-dynamic PET series. ``template`` (default) reuses the motion-correction
-template, providing a consistent target for downstream registration. ``twa``
-computes a time-weighted average, which emphasizes later frames with higher
-counts, ``sum`` produces a straightforward summed image, and ``first5min``
-averages only the first 5 minutes to capture perfusion-like uptake. When
-:option:`--hmc-off` disables motion correction, requesting ``template``
-automatically falls back to ``twa`` with a warning.
+dynamic PET series. Each strategy uses the frame timing metadata from
+``FrameTimesStart`` and ``FrameDuration`` to weight volumes; missing metadata
+will raise an error before preprocessing starts.
+
+* ``template`` (default) reuses the motion-correction template, providing a
+  consistent target for downstream registration. When :option:`--hmc-off`
+  disables motion correction, requesting ``template`` automatically falls back
+  to ``twa`` with a warning.
+* ``twa`` computes a time-weighted average, which often emphasizes later frames with
+  higher counts and longer durations.
+* ``sum`` produces a straightforward summed image.
+* ``first5min`` averages only the first 5 minutes of PET data to capture perfusion-like
+  uptake.
 
 Anatomical co-registration
 --------------------------
 *PETPrep* aligns the PET reference volume to the T1-weighted anatomy before
-deriving downstream outputs. Choose the registration backend with
-:option:`--pet2anat-method`: ``mri_coreg`` (default FreeSurfer co-registration),
-``robust`` (FreeSurfer ``mri_robust_register`` with an NMI cost function), or
-``ants`` (ANTs rigid registration). The :option:`--pet2anat-dof` flag controls
-the degrees of freedom; ``robust`` and ``ants`` are limited to rigid-body
-alignment and therefore require ``--pet2anat-dof 6``.
+deriving downstream outputs. The anatomical image is first trimmed with
+FSL's ``robustfov`` to remove the shoulder/neck and masked to limit registration to brain voxels. Choose
+the registration backend with :option:`--pet2anat-method`: ``mri_coreg``
+(default FreeSurfer co-registration), ``robust`` (FreeSurfer
+``mri_robust_register`` with an NMI cost function), or ``ants`` (ANTs rigid
+registration that consumes the unmasked T1w and a separate mask). The
+:option:`--pet2anat-dof` flag controls the degrees of freedom; ``robust`` and
+``ants`` are limited to rigid-body alignment and therefore require
+``--pet2anat-dof 6``. All modes emit paired ITK transforms for reuse in later
+resampling steps.
 
 Segmentation
 ----------------

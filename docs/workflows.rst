@@ -351,6 +351,8 @@ requested with :option:`--petref`:
 * ``twa`` computes a time-weighted average of the motion-corrected series,
   preserving dynamic information when later frames carry more counts.
 * ``sum`` produces a summed image of the motion-corrected series.
+* ``first5min`` weights only the first five minutes of the acquisition, which
+  can be helpful for tracers whose early dynamics resemble perfusion.
 
 Head-motion estimation
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -428,13 +430,15 @@ PET to T1w registration
     )
 
 The PET reference volume is aligned to the skull-stripped anatomical image
-using the method selected via :option:`--pet2anat-method`. By default, the
-workflow runs FreeSurfer's ``mri_coreg`` with the number of degrees of freedom
-set via the :option:`--pet2anat-dof` flag. Alternative modes include
-FreeSurfer's ``mri_robust_register`` (``--pet2anat-method robust``) and ANTs
-rigid registration (``--pet2anat-method ants``). Both alternatives are limited
-to rigid-body alignment (6 DoF). The resulting affine is converted to ITK
-format for downstream application, along with its inverse.
+using the method selected via :option:`--pet2anat-method`. The anatomical image
+is first cropped with FSL's ``robustfov`` and masked to focus the alignment on
+brain tissue (ANTs receives the unmasked cropped image together with its mask).
+By default, the workflow runs FreeSurfer's ``mri_coreg`` with the number of
+degrees of freedom set via the :option:`--pet2anat-dof` flag. Alternative modes
+include FreeSurfer's ``mri_robust_register`` (``--pet2anat-method robust``) and
+ANTs rigid registration (``--pet2anat-method ants``). Both alternatives are
+limited to rigid-body alignment (6 DoF). The resulting affine is converted to
+ITK format for downstream application, along with its inverse.
 
 Resampling PET runs onto standard spaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
