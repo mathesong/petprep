@@ -442,8 +442,18 @@ def test_pet_fit_reruns_coreg_with_custom_options(bids_root: Path, tmp_path: Pat
 
     deriv_root = tmp_path / 'derivs'
     petref = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_desc-hmc_petref.nii.gz'
-    hmc_xfm = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_from-orig_to-petref_mode-image_xfm.txt'
-    petref2anat_xfm = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_from-petref_to-anat_mode-image_xfm.txt'
+    hmc_xfm = (
+        deriv_root
+        / 'sub-01'
+        / 'pet'
+        / 'sub-01_task-rest_run-1_from-orig_to-petref_mode-image_xfm.txt'
+    )
+    petref2anat_xfm = (
+        deriv_root
+        / 'sub-01'
+        / 'pet'
+        / 'sub-01_task-rest_run-1_from-petref_to-anat_mode-image_xfm.txt'
+    )
 
     petref.parent.mkdir(parents=True)
     img.to_filename(petref)
