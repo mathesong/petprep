@@ -5,6 +5,7 @@ import nitransforms as nt
 import numpy as np
 import pytest
 import yaml
+from nipype.interfaces.base import Undefined
 from nipype.pipeline.engine.utils import generate_expanded_graph
 from niworkflows.utils.testing import generate_bids_skeleton
 
@@ -429,6 +430,40 @@ def test_pet_fit_stage1_with_cached_baseline(bids_root: Path, tmp_path: Path):
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed=precomputed, omp_nthreads=1)
 
     assert not any(name.startswith('pet_hmc_wf') for name in wf.list_node_names())
+
+
+def test_pet_fit_reruns_coreg_with_custom_options(bids_root: Path, tmp_path: Path):
+    """Custom co-registration options should ignore cached transforms."""
+
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    img = nb.Nifti1Image(np.zeros((2, 2, 2, 1)), np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+
+    deriv_root = tmp_path / 'derivs'
+    petref = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_desc-hmc_petref.nii.gz'
+    hmc_xfm = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_from-orig_to-petref_mode-image_xfm.txt'
+    petref2anat_xfm = deriv_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_from-petref_to-anat_mode-image_xfm.txt'
+
+    petref.parent.mkdir(parents=True)
+    img.to_filename(petref)
+    np.savetxt(hmc_xfm, np.eye(4))
+    np.savetxt(petref2anat_xfm, np.eye(4))
+
+    sidecar = Path(pet_series[0]).with_suffix('').with_suffix('.json')
+    sidecar.write_text('{"FrameTimesStart": [0], "FrameDuration": [1]}')
+
+    entities = bids.extract_entities(pet_series)
+    precomputed = bids.collect_derivatives(derivatives_dir=deriv_root, entities=entities)
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.petref = 'twa'
+        config.workflow.pet2anat_method = 'robust'
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed=precomputed, omp_nthreads=1)
+
+    node_names = wf.list_node_names()
+    assert 'pet_reg_wf.mri_robust_register' in node_names
+    assert wf.get_node('outputnode').inputs.petref2anat_xfm is Undefined
 
 
 def test_pet_fit_hmc_off_disables_stage1(bids_root: Path, tmp_path: Path):

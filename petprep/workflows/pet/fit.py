@@ -640,6 +640,16 @@ def init_pet_fit_wf(
         func_fit_reports_wf.inputs.inputnode.report_pet = pet_file
 
     # Stage 2: Coregistration
+    rerun_coreg = petref2anat_xform and (
+        config.workflow.petref != 'template' or config.workflow.pet2anat_method != 'mri_coreg'
+    )
+    if rerun_coreg:
+        config.loggers.workflow.info(
+            'PET Stage 2: Re-running co-registration because --petref or --pet2anat-method '
+            'were set to non-default values.'
+        )
+        petref2anat_xform = None
+
     if not petref2anat_xform:
         config.loggers.workflow.info('PET Stage 2: Adding co-registration workflow of PET to T1w')
         # calculate PET registration to T1w
