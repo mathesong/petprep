@@ -364,6 +364,8 @@ def test_init_pet_fit_wf_ants_registration(bids_root: Path, tmp_path: Path):
         wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
 
     node_names = wf.list_node_names()
+    assert 'pet_reg_wf.init_mri_coreg' in node_names
+    assert 'pet_reg_wf.init_coreg_xfm' in node_names
     assert 'pet_reg_wf.ants_registration' in node_names
     assert 'pet_reg_wf.mri_coreg' not in node_names
     assert 'pet_reg_wf.mri_robust_register' not in node_names

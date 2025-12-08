@@ -144,7 +144,7 @@ def init_pet_reg_wf(
                 smoothing_sigmas=[[2, 1, 0]],
                 sigma_units=['vox'],
                 use_histogram_matching=False,
-                initial_moving_transform_com=1,
+                initial_moving_transform_com=False,
                 winsorize_lower_quantile=0.001,
                 winsorize_upper_quantile=0.999,
             ),
@@ -152,6 +152,13 @@ def init_pet_reg_wf(
             n_procs=omp_nthreads,
             mem_gb=mem_gb * 2,
         )
+        init_coreg = pe.Node(
+            MRICoreg(dof=6, sep=[4], ftol=0.0001, linmintol=0.01),
+            name='init_mri_coreg',
+            n_procs=omp_nthreads,
+            mem_gb=5,
+        )
+        init_xfm = pe.Node(ConcatenateXFMs(), name='init_coreg_xfm')
         coreg_target = 'fixed_image'
         coreg_mask = 'fixed_image_masks'
         coreg_moving = 'moving_image'
@@ -199,6 +206,9 @@ def init_pet_reg_wf(
         connections = [
             (robust_fov, mask_brain, [('out_roi', 'in_file')]),
             (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
+            (inputnode, init_coreg, [('ref_pet_brain', 'source_file')]),
+            (mask_brain, init_coreg, [('out_file', 'reference_file')]),
+            (init_coreg, init_xfm, [('out_lta_file', 'in_xfms')]),
             (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
             (
                 robust_fov,
@@ -207,6 +217,7 @@ def init_pet_reg_wf(
                     ('out_roi', coreg_target),
                 ],
             ),
+            (init_xfm, coreg, [('out_xfm', 'initial_moving_transform')]),
             (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
             (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
             (

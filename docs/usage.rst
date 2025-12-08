@@ -237,11 +237,12 @@ FSL's ``robustfov`` to remove the shoulder/neck and masked to limit registration
 the registration backend with :option:`--pet2anat-method`: ``mri_coreg``
 (default FreeSurfer co-registration), ``robust`` (FreeSurfer
 ``mri_robust_register`` with an NMI cost function), or ``ants`` (ANTs rigid
-registration that consumes the unmasked T1w and a separate mask). The
-:option:`--pet2anat-dof` flag controls the degrees of freedom; ``robust`` and
-``ants`` are limited to rigid-body alignment and therefore require
-``--pet2anat-dof 6``. All modes emit paired ITK transforms for reuse in later
-resampling steps.
+registration that consumes the unmasked T1w and a separate mask). When ``ants``
+is selected, a coarse FreeSurfer ``mri_coreg`` alignment seeds the ANTs run to
+stabilize initialization. The :option:`--pet2anat-dof` flag controls the
+degrees of freedom; ``robust`` and ``ants`` are limited to rigid-body alignment
+and therefore require ``--pet2anat-dof 6``. All modes emit paired ITK
+transforms for reuse in later resampling steps.
 
 Segmentation
 ----------------
