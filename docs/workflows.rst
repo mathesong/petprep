@@ -436,11 +436,9 @@ brain tissue (ANTs receives the unmasked cropped image together with its mask).
 By default, the workflow runs FreeSurfer's ``mri_coreg`` with the number of
 degrees of freedom set via the :option:`--pet2anat-dof` flag. Alternative modes
 include FreeSurfer's ``mri_robust_register`` (``--pet2anat-method robust``) and
-ANTs rigid registration (``--pet2anat-method ants``). When ANTs is selected, a
-coarse ``mri_coreg`` pass provides an initial transform before optimization
-continues in ANTs. Both alternatives are limited to rigid-body alignment (6 DoF).
-The resulting affine is converted to ITK format for downstream application,
-along with its inverse.
+ANTs rigid registration (``--pet2anat-method ants``). Both alternatives are
+limited to rigid-body alignment (6 DoF). The resulting affine is converted to
+ITK format for downstream application, along with its inverse.
 
 Resampling PET runs onto standard spaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
