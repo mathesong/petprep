@@ -641,12 +641,15 @@ def init_pet_fit_wf(
 
     # Stage 2: Coregistration
     rerun_coreg = petref2anat_xform and (
-        config.workflow.petref != 'template' or config.workflow.pet2anat_method != 'mri_coreg'
+        config.workflow.petref != 'template'
+        or config.workflow.pet2anat_method != 'mri_coreg'
+        or config.workflow.petref_specified
+        or config.workflow.pet2anat_method_specified
     )
     if rerun_coreg:
         config.loggers.workflow.info(
             'PET Stage 2: Re-running co-registration because --petref or --pet2anat-method '
-            'were set to non-default values.'
+            'were explicitly requested.'
         )
         petref2anat_xform = None
 
