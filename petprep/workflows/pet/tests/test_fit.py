@@ -476,9 +476,7 @@ def test_pet_fit_reruns_coreg_with_custom_options(bids_root: Path, tmp_path: Pat
     assert wf.get_node('outputnode').inputs.petref2anat_xfm is Undefined
 
 
-def test_pet_fit_reruns_coreg_when_default_options_specified(
-    bids_root: Path, tmp_path: Path
-):
+def test_pet_fit_reruns_coreg_when_default_options_specified(bids_root: Path, tmp_path: Path):
     """Explicit default CLI flags should also ignore cached transforms."""
 
     pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
