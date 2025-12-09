@@ -219,8 +219,10 @@ def _write_identity_xforms(num_frames: int, filename: Path) -> Path:
     return filename
 
 
-def _construct_nu_path(subjects_dir: str | Path, subject_id: str) -> str:
+def _construct_nu_path(subjects_dir: str, subject_id: str) -> str:
     """Return the expected path to FreeSurfer's ``nu.mgz`` for ``subject_id``."""
+
+    from pathlib import Path
 
     return str(Path(subjects_dir) / subject_id / 'mri' / 'nu.mgz')
 
