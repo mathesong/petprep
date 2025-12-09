@@ -700,7 +700,7 @@ def init_pet_fit_wf(
         ])  # fmt:skip
         val_pet.inputs.in_file = pet_file
         if petref_strategy == 'auto':
-            workflow.connect([(val_pet, petref_buffer, [('out_file', 'pet_file')])])
+            corrected_pet_for_report.inputs.ref_file = petref
             workflow.connect([(petref_candidates, petref_buffer, [('template', 'petref')])])
             workflow.connect([
                 (val_pet, corrected_pet_for_report, [('out_file', 'in_file')]),
