@@ -39,6 +39,18 @@ Command-Line Arguments
    :nodefaultconst:
 
 
+Anatomical reference selection
+------------------------------
+PETPrep uses an anatomical reference when registering PET data to the structural
+image. By default, the workflow relies on the preprocessed T1w image
+(:option:`--anatref t1w`), but FreeSurfer users can ask PETPrep to prefer the
+intensity-normalized ``nu.mgz`` volume produced after non-uniformity correction
+(:option:`--anatref nu`). When :option:`--anatref auto` is set, PETPrep inspects
+the PET-derived brain mask volume relative to the anatomical mask. If the PET
+mask is substantially larger than expected (volume ratio > 1.5), the workflow
+automatically switches to ``nu.mgz`` to improve co-registration robustness.
+
+
 The command-line interface of the docker wrapper
 ------------------------------------------------
 
