@@ -119,6 +119,7 @@ def init_pet_reg_wf(
         name='outputnode',
     )
 
+    convert_anat = pe.Node(MRIConvert(out_type='niigz'), name='convert_anat')
     mask_brain = pe.Node(ApplyMask(), name='mask_brain')
     crop_anat_mask = pe.Node(MRIConvert(out_type='niigz'), name='crop_anat_mask')
     robust_fov = pe.Node(RobustFOV(output_type='NIFTI_GZ'), name='robust_fov')
@@ -238,7 +239,8 @@ def init_pet_reg_wf(
 
     workflow.connect(
         [
-            (inputnode, robust_fov, [('anat_preproc', 'in_file')]),
+            (inputnode, convert_anat, [('anat_preproc', 'in_file')]),
+            (convert_anat, robust_fov, [('out_file', 'in_file')]),
             (inputnode, crop_anat_mask, [('anat_mask', 'in_file')]),
             (robust_fov, crop_anat_mask, [('out_roi', 'reslice_like')]),
         ]
