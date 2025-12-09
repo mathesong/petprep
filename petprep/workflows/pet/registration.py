@@ -78,8 +78,10 @@ def init_pet_reg_wf(
     pet2anat_method : :obj:`str`
         Method for PET-to-anatomical registration. Options are 'mri_coreg'
         (default FreeSurfer co-registration), 'robust' (uses FreeSurfer
-        mri_robust_register with NMI, 6 DoF only), or 'ants' (uses ANTs rigid
-        registration, 6 DoF only).
+        mri_robust_register with NMI, 6 DoF only), 'ants' (uses ANTs rigid
+        registration, 6 DoF only), or 'ants_ai_init' (uses ANTs rigid
+        registration with antsAI multi-start initialization for aggressive
+        search, 6 DoF only).
     name : :obj:`str`
         Name of workflow (default: ``pet_reg_wf``)
 
@@ -102,6 +104,7 @@ def init_pet_reg_wf(
 
     """
     from nipype.interfaces.ants import Registration
+    from nipype.interfaces.ants.utils import AI
     from nipype.interfaces.freesurfer import MRIConvert, MRICoreg, RobustRegister
     from nipype.interfaces.fsl import RobustFOV
     from niworkflows.engine.workflows import LiterateWorkflow as Workflow
@@ -157,6 +160,61 @@ def init_pet_reg_wf(
         coreg_moving = 'moving_image'
         coreg_output = 'forward_transforms'
         coreg_output_is_list = True
+        use_ai_init = False
+
+    elif pet2anat_method == 'ants_ai_init':
+        # antsAI initialization node with aggressive search parameters
+        ai_init = pe.Node(
+            AI(
+                dimension=3,
+                verbose=True,
+                metric=('Mattes', 32, 'Regular', 0.25),
+                transform=('Rigid', 0.1),
+                principal_axes=False,
+                search_factor=(10, 0.25),  # Aggressive: step=10deg, radian_fraction=0.25
+                convergence=(10, 1e-6, 10),
+                output_transform='pet2anat_init.mat',
+            ),
+            name='ai_init',
+            n_procs=omp_nthreads,
+            mem_gb=mem_gb,
+        )
+
+        # ANTs Registration node (same params as 'ants' but using AI output as init)
+        coreg = pe.Node(
+            Registration(
+                dimension=3,
+                float=True,
+                output_transform_prefix='pet2anat_',
+                output_warped_image='pet2anat_Warped.nii.gz',
+                transforms=['Rigid'],
+                transform_parameters=[(0.1,)],
+                metric=['MI'],
+                metric_weight=[1],
+                radius_or_number_of_bins=[32],
+                sampling_strategy=['Regular'],
+                sampling_percentage=[0.25],
+                number_of_iterations=[[1000, 500, 250]],
+                convergence_threshold=[1e-6],
+                convergence_window_size=[10],
+                shrink_factors=[[4, 2, 1]],
+                smoothing_sigmas=[[2, 1, 0]],
+                sigma_units=['vox'],
+                use_histogram_matching=False,
+                # NO initial_moving_transform_com - using AI output instead
+                winsorize_lower_quantile=0.001,
+                winsorize_upper_quantile=0.999,
+            ),
+            name='ants_registration',
+            n_procs=omp_nthreads,
+            mem_gb=mem_gb * 2,
+        )
+        coreg_target = 'fixed_image'
+        coreg_mask = 'fixed_image_masks'
+        coreg_moving = 'moving_image'
+        coreg_output = 'forward_transforms'
+        coreg_output_is_list = True
+        use_ai_init = True
 
     elif pet2anat_method == 'robust':
         coreg = pe.Node(
@@ -177,6 +235,7 @@ def init_pet_reg_wf(
         coreg_moving = 'source_file'
         coreg_output = 'out_reg_file'
         coreg_output_is_list = False
+        use_ai_init = False
 
     else:  # mri_coreg (default)
         coreg = pe.Node(
@@ -189,6 +248,7 @@ def init_pet_reg_wf(
         coreg_moving = 'source_file'
         coreg_output = 'out_lta_file'
         coreg_output_is_list = False
+        use_ai_init = False
 
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
 
@@ -196,28 +256,55 @@ def init_pet_reg_wf(
     if coreg_output_is_list:
         # ANTs outputs a list of transforms; take the first (and only) one
         # ANTs gets unmasked T1W + separate mask (not pre-masked image)
-        connections = [
-            (robust_fov, mask_brain, [('out_roi', 'in_file')]),
-            (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
-            (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
-            (
-                robust_fov,
-                coreg,
-                [
-                    ('out_roi', coreg_target),
-                ],
-            ),
-            (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
-            (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
-            (
-                convert_xfm,
-                outputnode,
-                [
-                    ('out_xfm', 'itk_pet_to_t1'),
-                    ('out_inv', 'itk_t1_to_pet'),
-                ],
-            ),
-        ]
+        if use_ai_init:
+            # ants_ai_init: Connect AI -> Registration -> output
+            connections = [
+                (robust_fov, mask_brain, [('out_roi', 'in_file')]),
+                (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
+                # AI node connections
+                (robust_fov, ai_init, [('out_roi', 'fixed_image')]),
+                (inputnode, ai_init, [('ref_pet_brain', 'moving_image')]),
+                (crop_anat_mask, ai_init, [('out_file', 'fixed_image_mask')]),
+                # Registration node connections (using AI output for initialization)
+                (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
+                (robust_fov, coreg, [('out_roi', coreg_target)]),
+                (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
+                (ai_init, coreg, [('output_transform', 'initial_moving_transform')]),
+                # Output connections
+                (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
+                (
+                    convert_xfm,
+                    outputnode,
+                    [
+                        ('out_xfm', 'itk_pet_to_t1'),
+                        ('out_inv', 'itk_t1_to_pet'),
+                    ],
+                ),
+            ]
+        else:
+            # Standard ANTs without AI initialization
+            connections = [
+                (robust_fov, mask_brain, [('out_roi', 'in_file')]),
+                (crop_anat_mask, mask_brain, [('out_file', 'in_mask')]),
+                (inputnode, coreg, [('ref_pet_brain', coreg_moving)]),
+                (
+                    robust_fov,
+                    coreg,
+                    [
+                        ('out_roi', coreg_target),
+                    ],
+                ),
+                (crop_anat_mask, coreg, [('out_file', coreg_mask)]),
+                (coreg, convert_xfm, [((coreg_output, _get_first), 'in_xfms')]),
+                (
+                    convert_xfm,
+                    outputnode,
+                    [
+                        ('out_xfm', 'itk_pet_to_t1'),
+                        ('out_inv', 'itk_t1_to_pet'),
+                    ],
+                ),
+            ]
     else:
         # mri_coreg and mri_robust_register output single transform file
         connections = [

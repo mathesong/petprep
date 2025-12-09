@@ -361,11 +361,13 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '--pet2anat-method',
         action='store',
         default='mri_coreg',
-        choices=['mri_coreg', 'robust', 'ants'],
+        choices=['mri_coreg', 'robust', 'ants', 'ants_ai_init'],
         help='Method for PET-to-anatomical registration. '
         '"mri_coreg" (default) uses FreeSurfer mri_coreg. '
         '"robust" uses FreeSurfer mri_robust_register (6 DoF only). '
-        '"ants" uses ANTs rigid registration (6 DoF only).',
+        '"ants" uses ANTs rigid registration (6 DoF only). '
+        '"ants_ai_init" uses ANTs rigid registration with antsAI '
+        'multi-start initialization for aggressive search (6 DoF only).',
     )
     g_conf.add_argument(
         '--force-bbr',
@@ -776,7 +778,7 @@ def parse_args(args=None, namespace=None):
     opts = parser.parse_args(argv, namespace)
 
     # Validate DoF constraints for registration methods
-    if opts.pet2anat_method in ('robust', 'ants') and opts.pet2anat_dof != 6:
+    if opts.pet2anat_method in ('robust', 'ants', 'ants_ai_init') and opts.pet2anat_dof != 6:
         parser.error(f'--pet2anat-method {opts.pet2anat_method} requires --pet2anat-dof=6.')
 
     if opts.config_file:
