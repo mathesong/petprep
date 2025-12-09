@@ -676,7 +676,9 @@ def test_select_anatomical_reference_fallback(tmp_path: Path):
     t1 = tmp_path / 't1.nii.gz'
     nb.Nifti1Image(np.ones((2, 2, 2), dtype=np.float32), np.eye(4)).to_filename(t1)
 
-    selected, label = _select_anatomical_reference('auto', str(t1), str(tmp_path / 'missing.mgz'), True)
+    selected, label = _select_anatomical_reference(
+        'auto', str(t1), str(tmp_path / 'missing.mgz'), True
+    )
 
     assert label == 't1w'
     assert selected == str(t1)

@@ -373,11 +373,11 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         default='t1w',
         choices=['t1w', 'nu', 'auto'],
         help=(
-            "Anatomical reference to use for PET-to-T1w registration. "
-            "The default ('t1w') uses the preprocessed T1-weighted image. "
+            'Anatomical reference to use for PET-to-T1w registration. '
+            The default ('t1w') uses the preprocessed T1-weighted image. "
             "Use 'nu' to prefer FreeSurfer's bias-corrected nu.mgz (an "
-            "intensity normalized volume generated after correcting for "
-            "non-uniformity in the orig.mgz), or "
+            'intensity normalized volume generated after correcting for '
++            'non-uniformity in the orig.mgz), or '
             "'auto' to switch to nu.mgz when the PET-derived mask is unusually large."
         ),
     )

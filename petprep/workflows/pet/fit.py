@@ -244,7 +244,9 @@ def _detect_large_pet_mask(
     pet_img = nb.load(pet_mask)
     t1_img = nb.load(t1w_mask)
 
-    pet_vol = float(np.count_nonzero(pet_img.get_fdata()) * np.prod(pet_img.header.get_zooms()[:3]))
+    pet_vol = float(
+        np.count_nonzero(pet_img.get_fdata()) * np.prod(pet_img.header.get_zooms()[:3])
+    )
     t1_vol = float(np.count_nonzero(t1_img.get_fdata()) * np.prod(t1_img.header.get_zooms()[:3]))
     ratio = pet_vol / t1_vol if t1_vol else float('inf')
 
@@ -726,7 +728,12 @@ def init_pet_fit_wf(
         niu.Function(
             function=_detect_large_pet_mask,
             input_names=['pet_mask', 't1w_mask', 'volume_ratio_threshold'],
-            output_names=['use_nu_recommendation', 'volume_ratio', 'pet_mask_volume', 't1_mask_volume'],
+            output_names=[
+                'use_nu_recommendation',
+                'volume_ratio',
+                'pet_mask_volume',
+                't1_mask_volume'
+            ],
             imports=['import nibabel as nb'],
         ),
         name='detect_large_mask',
