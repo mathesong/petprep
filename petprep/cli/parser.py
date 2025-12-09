@@ -368,6 +368,18 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '"ants" uses ANTs rigid registration (6 DoF only).',
     )
     g_conf.add_argument(
+        '--anatref',
+        action='store',
+        default='t1w',
+        choices=['t1w', 'nu', 'auto'],
+        help=(
+            "Anatomical reference to use for PET-to-T1w registration. "
+            "The default ('t1w') uses the preprocessed T1-weighted image. "
+            "Use 'nu' to prefer FreeSurfer's bias-corrected nu.mgz, or "
+            "'auto' to switch to nu.mgz when the PET-derived mask is unusually large."
+        ),
+    )
+    g_conf.add_argument(
         '--force-bbr',
         action=DeprecatedAction,
         help='Deprecated - use `--force bbr` instead.',
