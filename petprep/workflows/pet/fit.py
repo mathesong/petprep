@@ -233,6 +233,7 @@ def _detect_large_pet_mask(
     """Assess whether the PET mask is unusually large relative to the anatomical mask."""
 
     import logging
+    import nibabel as nb
 
     import numpy as np
 
