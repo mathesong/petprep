@@ -369,6 +369,31 @@ def test_init_pet_fit_wf_ants_registration(bids_root: Path, tmp_path: Path):
     assert 'pet_reg_wf.mri_robust_register' not in node_names
 
 
+def test_init_pet_fit_wf_auto_registration(bids_root: Path, tmp_path: Path):
+    """Auto PET-to-anatomical registration runs and scores both branches."""
+    pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]
+    img = nb.Nifti1Image(np.zeros((2, 2, 2, 1)), np.eye(4))
+    for path in pet_series:
+        img.to_filename(path)
+        Path(path).with_suffix('').with_suffix('.json').write_text(
+            '{"FrameTimesStart": [0], "FrameDuration": [1]}'
+        )
+
+    with mock_config(bids_dir=bids_root):
+        config.workflow.pet2anat_method = 'auto'
+        config.workflow.pet2anat_dof = 6
+        wf = init_pet_fit_wf(pet_series=pet_series, precomputed={}, omp_nthreads=1)
+
+    node_names = wf.list_node_names()
+    assert 'pet_reg_wf.ants_registration' in node_names
+    assert 'pet_reg_wf.mri_coreg' in node_names
+    assert 'pet_reg_wf.select_best' in node_names
+    assert 'pet_reg_wf.score_ants' in node_names
+    assert 'pet_reg_wf.score_fs' in node_names
+    assert 'pet_reg_wf.warp_pet_ants' in node_names
+    assert 'pet_reg_wf.warp_pet_fs' in node_names
+
+
 def test_pet_fit_requires_both_derivatives(bids_root: Path, tmp_path: Path):
     """Supplying only one of petref or HMC transforms should raise an error."""
     pet_series = [str(bids_root / 'sub-01' / 'pet' / 'sub-01_task-rest_run-1_pet.nii.gz')]

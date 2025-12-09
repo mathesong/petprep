@@ -468,6 +468,7 @@ def init_pet_fit_wf(
             'mri_coreg': 'mri_coreg',
             'robust': 'mri_robust_register',
             'ants': 'ants_registration',
+            'auto': 'auto_select',
         }[config.workflow.pet2anat_method]
     if hmc_disabled:
         config.execution.work_dir.mkdir(parents=True, exist_ok=True)
@@ -678,6 +679,7 @@ def init_pet_fit_wf(
             (val_pet, ds_petreg_wf, [('out_file', 'inputnode.source_files')]),
             (pet_reg_wf, ds_petreg_wf, [('outputnode.itk_pet_to_t1', 'inputnode.xform')]),
             (ds_petreg_wf, outputnode, [('outputnode.xform', 'petref2anat_xfm')]),
+            (pet_reg_wf, summary, [('outputnode.registration_winner', 'registration_winner')]),
         ])  # fmt:skip
     else:
         outputnode.inputs.petref2anat_xfm = petref2anat_xform

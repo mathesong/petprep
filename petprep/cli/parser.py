@@ -361,11 +361,12 @@ https://petprep.readthedocs.io/en/{currentv.base_version if is_release else 'lat
         '--pet2anat-method',
         action='store',
         default='mri_coreg',
-        choices=['mri_coreg', 'robust', 'ants'],
+        choices=['mri_coreg', 'robust', 'ants', 'auto'],
         help='Method for PET-to-anatomical registration. '
         '"mri_coreg" (default) uses FreeSurfer mri_coreg. '
         '"robust" uses FreeSurfer mri_robust_register (6 DoF only). '
-        '"ants" uses ANTs rigid registration (6 DoF only).',
+        '"ants" uses ANTs rigid registration (6 DoF only). '
+        '"auto" runs both FreeSurfer and ANTs and selects the best.',
     )
     g_conf.add_argument(
         '--force-bbr',

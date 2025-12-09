@@ -230,9 +230,17 @@ class FunctionalSummaryInputSpec(TraitedSpec):
         'mri_coreg',
         'mri_robust_register',
         'ants_registration',
+        'auto_select',
         'Precomputed',
         mandatory=True,
         desc='PET/anatomical registration method',
+    )
+    registration_winner = traits.Enum(
+        None,
+        'ants',
+        'freesurfer',
+        allow_none=True,
+        desc='Winner selected during automatic PET-to-T1w registration',
     )
     registration_dof = traits.Enum(
         6, 9, 12, desc='Registration degrees of freedom', mandatory=True
@@ -267,6 +275,18 @@ class FunctionalSummary(SummaryInterface):
             reg = f'ANTs <code>ants_registration</code> ({dof} DoF)'
         elif self.inputs.registration == 'mri_robust_register':
             reg = 'FreeSurfer <code>mri_robust_register</code> (NMI cost)'
+        elif self.inputs.registration == 'auto_select':
+            winner = self.inputs.registration_winner
+            if winner == 'ants':
+                winner_desc = 'ANTs'
+            elif winner == 'freesurfer':
+                winner_desc = 'FreeSurfer'
+            else:
+                winner_desc = 'not recorded'
+            reg = (
+                'Automatic selection between FreeSurfer and ANTs '
+                f'(best score: {winner_desc})'
+            )
         else:
             reg = f'Unknown registration method: {self.inputs.registration}'
 

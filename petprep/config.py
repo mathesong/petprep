@@ -557,7 +557,7 @@ class workflow(_Config):
     pet2anat_init = 'auto'
     """Initial transform for PET-to-anatomical registration."""
     pet2anat_method: str = 'mri_coreg'
-    """PET-to-anatomical registration method (mri_coreg, robust, or ants)."""
+    """PET-to-anatomical registration method (mri_coreg, robust, ants, or auto)."""
     pet2anat_method_specified: bool = False
     """Flag indicating whether ``--pet2anat-method`` was explicitly provided."""
     petref: str = 'template'
