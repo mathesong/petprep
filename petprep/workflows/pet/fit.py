@@ -271,6 +271,7 @@ def _select_anatomical_reference(
     """Choose the anatomical reference to feed into the co-registration workflow."""
 
     import logging
+    from pathlib import Path
 
     log = logging.getLogger('nipype.workflow')
 
