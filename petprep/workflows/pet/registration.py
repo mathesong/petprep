@@ -164,6 +164,8 @@ def init_pet_reg_wf(
 
     elif pet2anat_method == 'ants_ai_init':
         # antsAI initialization node with aggressive search parameters
+        # Uses both rotational search AND translation search grid to handle
+        # large FOV offsets common in PET-to-T1w registration
         ai_init = pe.Node(
             AI(
                 dimension=3,
@@ -171,7 +173,8 @@ def init_pet_reg_wf(
                 metric=('Mattes', 32, 'Regular', 0.25),
                 transform=('Rigid', 0.1),
                 principal_axes=False,
-                search_factor=(10, 0.25),  # Aggressive: step=10deg, radian_fraction=0.25
+                search_factor=(20, 0.05),  # Rotational: 20deg steps, 5% arc = ~9 rotations total
+                search_grid=(40, (80, 80, 80)),  # Translation: 40mm steps, 80mm range (4x4x4=64 combos)
                 convergence=(10, 1e-6, 10),
                 output_transform='pet2anat_init.mat',
             ),
