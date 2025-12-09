@@ -732,7 +732,7 @@ def init_pet_fit_wf(
                 'use_nu_recommendation',
                 'volume_ratio',
                 'pet_mask_volume',
-                't1_mask_volume'
+                't1_mask_volume',
             ],
             imports=['import nibabel as nb'],
         ),
