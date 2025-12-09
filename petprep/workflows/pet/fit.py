@@ -750,6 +750,9 @@ def init_pet_fit_wf(
         )
         petref2anat_xform = None
 
+    pet_to_t1_source = None
+    pet_to_t1_field = None
+
     if not petref2anat_xform:
         config.loggers.workflow.info('PET Stage 2: Adding co-registration workflow of PET to T1w')
 
@@ -837,6 +840,9 @@ def init_pet_fit_wf(
                 (select_best_ref, summary, [('best_winner', 'registration_winner')]),
                 (select_best_ref, summary, [('best_label', 'petref_strategy')]),
             ])  # fmt:skip
+
+            pet_to_t1_source = select_best_ref
+            pet_to_t1_field = 'best_transform'
         else:
             # calculate PET registration to T1w
             pet_reg_wf = init_pet_reg_wf(
@@ -866,6 +872,9 @@ def init_pet_fit_wf(
                 (ds_petreg_wf, outputnode, [('outputnode.xform', 'petref2anat_xfm')]),
                 (pet_reg_wf, summary, [('outputnode.registration_winner', 'registration_winner')]),
             ])  # fmt:skip
+
+            pet_to_t1_source = pet_reg_wf
+            pet_to_t1_field = 'outputnode.itk_pet_to_t1'
     else:
         outputnode.inputs.petref2anat_xfm = petref2anat_xform
 
@@ -884,12 +893,12 @@ def init_pet_fit_wf(
     petref_mask.inputs.thresh = 0.2
     merge_mask = pe.Node(niu.Function(function=_binary_union), name='merge_mask')
 
-    if not petref2anat_xform:
-        workflow.connect(
-            [(pet_reg_wf, t1w_mask_tfm, [('outputnode.itk_pet_to_t1', 'transforms')])]
-        )
-    else:
+    if petref2anat_xform:
         t1w_mask_tfm.inputs.transforms = petref2anat_xform
+    elif pet_to_t1_source and pet_to_t1_field:
+        workflow.connect(
+            [(pet_to_t1_source, t1w_mask_tfm, [(pet_to_t1_field, 'transforms')])]
+        )
 
     workflow.connect(
         [
