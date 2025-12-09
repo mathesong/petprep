@@ -720,6 +720,7 @@ def init_pet_fit_wf(
             function=_detect_large_pet_mask,
             input_names=['pet_mask', 't1w_mask', 'volume_ratio_threshold'],
             output_names=['use_nu_recommendation', 'volume_ratio', 'pet_mask_volume', 't1_mask_volume'],
+            imports=['import nibabel as nb'],
         ),
         name='detect_large_mask',
     )
