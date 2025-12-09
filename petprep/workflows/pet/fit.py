@@ -712,6 +712,9 @@ def init_pet_fit_wf(
     else:
         func_fit_reports_wf.inputs.inputnode.report_pet = pet_file
 
+    # Stage 2: Estimate PET brain mask
+    config.loggers.workflow.info('PET Stage 2: Adding estimation of PET brain mask')
+
     petref_mask = pe.Node(niu.Function(function=_smooth_binarize), name='petref_mask')
     petref_mask.inputs.fwhm = 10.0
     petref_mask.inputs.thresh = 0.2
@@ -758,8 +761,6 @@ def init_pet_fit_wf(
         ]
     )  # fmt:skip
 
-    # Stage 2: Estimate PET brain mask
-    config.loggers.workflow.info('PET Stage 2: Adding estimation of PET brain mask')
     from niworkflows.interfaces.fixes import FixHeaderApplyTransforms as ApplyTransforms
 
     t1w_mask_tfm = pe.Node(
