@@ -209,22 +209,19 @@ def _extract_sum_image(pet_file: str, output_dir: 'Path') -> str:
 
 
 def _select_best_petref(labels, scores, transforms, inv_transforms, winners, petrefs):
-    """Select the PET reference with the lowest registration cost."""
+    """Select the PET reference with the highest registration score."""
 
     if not labels or not scores:
         raise ValueError('No PET reference candidates were provided for selection.')
 
-    best_idx = None
-    best_score = float('inf')
+    best_idx = 0
+    best_score = float('-inf')
     for idx, score in enumerate(scores):
         if score is None:
             continue
-        if score < best_score:
+        if score > best_score:
             best_idx = idx
             best_score = score
-
-    if best_idx is None:
-        raise ValueError('No registration scores were available for selection.')
 
     return (
         labels[best_idx],
