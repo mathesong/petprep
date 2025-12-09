@@ -185,12 +185,12 @@ def init_pet_reg_wf(
         fs_warp = pe.Node(ApplyTransforms(float=True), name='warp_pet_fs')
 
         ants_score = pe.Node(
-            MeasureImageSimilarity(metric='Mattes', dimension=3),
+            MeasureImageSimilarity(metric='Mattes', dimension=3, radius_or_number_of_bins=32),
             name='score_ants',
             mem_gb=config.DEFAULT_MEMORY_MIN_GB,
         )
         fs_score = pe.Node(
-            MeasureImageSimilarity(metric='Mattes', dimension=3),
+            MeasureImageSimilarity(metric='Mattes', dimension=3, radius_or_number_of_bins=32),
             name='score_fs',
             mem_gb=config.DEFAULT_MEMORY_MIN_GB,
         )
@@ -320,7 +320,7 @@ def init_pet_reg_wf(
     convert_xfm = pe.Node(ConcatenateXFMs(inverse=True), name='convert_xfm')
     warp_for_score = pe.Node(ApplyTransforms(float=True), name='warp_for_score')
     similarity = pe.Node(
-        MeasureImageSimilarity(metric='Mattes', dimension=3),
+        MeasureImageSimilarity(metric='Mattes', dimension=3, radius_or_number_of_bins=32),
         name='score_registration',
         mem_gb=config.DEFAULT_MEMORY_MIN_GB,
     )
